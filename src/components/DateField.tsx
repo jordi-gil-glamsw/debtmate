@@ -29,7 +29,7 @@ export function DateField({ value, onChange, minimum, maximum, accessibilityLabe
     maximumDate: maximum ? parseISODate(maximum) : undefined,
     accentColor: colors.accent,
     themeVariant: 'dark' as const,
-    locale: 'ca-ES',
+    // No `locale`: the native picker follows the device's regional format.
   };
 
   if (Platform.OS === 'ios') {

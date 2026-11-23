@@ -14,6 +14,7 @@ import { SheetHeader } from '@/components/SheetHeader';
 import { todayISO } from '@/domain/dates';
 import { centsToInput, parseAmount } from '@/domain/money';
 import { PAYMENT_METHOD_LABELS, type Contact, type Movement, type PaymentMethod } from '@/domain/types';
+import { ReceiptField } from '@/features/receipts/ReceiptField';
 import { confirm } from '@/lib/dialogs';
 import { deleteMovement, updateMovement, useContact, useMovements } from '@/store/store';
 import { colors, fonts, space, sheetMaxWidth } from '@/theme/tokens';
@@ -49,6 +50,7 @@ function EditForm({ movement, contact }: { movement: Movement; contact: Contact 
   const [amountText, setAmountText] = useState(centsToInput(movement.amountCents));
   const [concept, setConcept] = useState(movement.concept);
   const [note, setNote] = useState(movement.note ?? '');
+  const [receipt, setReceipt] = useState<string | undefined>(movement.receipt);
   const [date, setDate] = useState(movement.date);
   const [direction, setDirection] = useState<'owed' | 'owe'>(movement.kind === 'debt' ? movement.direction : 'owed');
   const [dueDate, setDueDate] = useState<string | undefined>(movement.kind === 'debt' ? movement.dueDate : undefined);
@@ -67,6 +69,7 @@ function EditForm({ movement, contact }: { movement: Movement; contact: Contact 
       amountCents: amount,
       concept: concept.trim(),
       date,
+      ...(receipt ? { receipt } : {}),
       ...(note.trim() ? { note: note.trim() } : {}),
     };
     updateMovement(
@@ -162,6 +165,8 @@ function EditForm({ movement, contact }: { movement: Movement; contact: Contact 
           </View>
         </View>
       ) : null}
+
+      <ReceiptField value={receipt} onChange={setReceipt} />
 
       <View style={{ gap: space.sm }}>
         <Button label="Desa els canvis" onPress={save} disabled={!canSave} />

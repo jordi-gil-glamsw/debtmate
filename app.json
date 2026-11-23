@@ -50,6 +50,14 @@
           "color": "#C8F169",
           "enableRemoteNotifications": false
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "DebtMate fa servir les teves fotos per adjuntar el tiquet a un deute.",
+          "cameraPermission": "DebtMate fa servir la càmera per fotografiar el tiquet d'un deute.",
+          "microphonePermission": false
+        }
       ]
     ],
     "experiments": {

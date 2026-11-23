@@ -28,6 +28,8 @@ const ICONS = {
   people: { ios: 'person.2', android: 'group', web: 'group' },
   chart: { ios: 'chart.bar.fill', android: 'bar_chart', web: 'bar_chart' },
   settings: { ios: 'gearshape', android: 'settings', web: 'settings' },
+  camera: { ios: 'camera', android: 'photo_camera', web: 'photo_camera' },
+  photo: { ios: 'photo', android: 'image', web: 'image' },
   bell: { ios: 'bell', android: 'notifications', web: 'notifications' },
   mail: { ios: 'envelope', android: 'mail', web: 'mail' },
   sync: { ios: 'arrow.triangle.2.circlepath', android: 'sync', web: 'sync' },

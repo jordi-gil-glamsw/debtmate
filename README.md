@@ -38,7 +38,7 @@ Sense configurar res, l'app funciona sense compte (les dades només es guarden a
 Per activar els comptes:
 
 1. Crea un projecte a [supabase.com](https://supabase.com) (el pla gratuït n'hi ha prou).
-2. **SQL Editor**: enganxa i executa, per ordre, `supabase/migrations/0001_init.sql` i `0002_grants.sql`.
+2. **SQL Editor**: enganxa i executa, per ordre, els fitxers de `supabase/migrations/` (`0001`, `0002`, `0003`…).
 3. Copia `.env.example` a `.env.local` i omple'l amb la URL i la *publishable key*
    (*Project Settings → API Keys*). Reinicia `npx expo start`.
 4. **Correu amb codi**: a *Authentication → Email Templates → Magic Link*, posa el codi al missatge,
@@ -110,10 +110,12 @@ Fet:
 
 - Web d'escriptori (≥ 1024 px): barra lateral, targetes de resum, taula de persones amb cerca
   i panell de detall; en finestres estretes, el mateix disseny que al mòbil amb barra inferior
+- Canviar el nom de les persones; nota i foto del tiquet a cada moviment (la foto es guarda al
+  dispositiu i, amb compte, a Supabase Storage; al web cal tenir la sessió iniciada)
 - Selector de data natiu (data del moviment i data límit) i edició de moviments (tocar un moviment)
 - Recordatoris: notificació local a les 10:00 del dia límit si encara hi ha deute pendent
   (iOS i Android; es recalculen amb cada canvi, també els sincronitzats)
 
 Pendent:
 
-1. Foto del tiquet; canviar el nom de les persones
+1. Publicar el web i les apps (EAS)

@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 
 import { supabase } from '@/lib/supabase';
+import { cleanupLocalReceipts } from '@/features/receipts/receipts';
 import { readLocalData, updateLocalData } from '@/store/store';
 
 import {
@@ -15,6 +16,7 @@ import {
   type MovementRow,
   type Table,
 } from './merge';
+import { removeReceipts, uploadReceipts } from './receiptStorage';
 
 /**
  * Network side of the sync (see merge.ts for the rules).
@@ -91,6 +93,8 @@ async function syncOnce(): Promise<void> {
 
   // 1. Push
   const batch = collectPush(readLocalData());
+  // Photos first, so other devices never see a movement whose photo isn't there yet.
+  await uploadReceipts(userId, batch.receipts.upload);
   for (const part of chunks(batch.contacts.map(contactToRow))) {
     const { error } = await supabase.from('contacts').upsert(part);
     if (error) throw error;
@@ -101,6 +105,7 @@ async function syncOnce(): Promise<void> {
   }
   await softDelete('movements', batch.deleted.movements);
   await softDelete('contacts', batch.deleted.contacts);
+  await removeReceipts(userId, batch.receipts.remove);
   forThisUser((d) => clearPushed(d, batch));
 
   // 2. Pull
@@ -113,6 +118,18 @@ async function syncOnce(): Promise<void> {
     const merged = applyRemote(d, contacts, movements);
     return { ...merged, sync: { ...merged.sync, lastSyncedAt: new Date().toISOString() } };
   });
+  cleanupReceipts();
+}
+
+/** Deletes local photo files that no movement (or pending upload) uses any more. */
+export function cleanupReceipts(): void {
+  const { movements, sync } = readLocalData();
+  const keep = new Set([...movements.flatMap((m) => (m.receipt ? [m.receipt] : [])), ...sync.receipts.upload]);
+  try {
+    cleanupLocalReceipts(keep);
+  } catch {
+    // best effort
+  }
 }
 
 let running: Promise<void> | null = null;

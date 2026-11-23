@@ -14,6 +14,7 @@ import { balanceOf } from '@/domain/balances';
 import { todayISO } from '@/domain/dates';
 import { centsToInput, formatMoney, parseAmount } from '@/domain/money';
 import { PAYMENT_METHOD_LABELS, type PaymentMethod } from '@/domain/types';
+import { ReceiptField } from '@/features/receipts/ReceiptField';
 import { addMovement, useContact, useMovements } from '@/store/store';
 import { colors, fonts, radius, space, sheetMaxWidth } from '@/theme/tokens';
 
@@ -35,6 +36,7 @@ export default function PaymentSheet() {
   const today = todayISO();
   const [date, setDate] = useState(today);
   const [note, setNote] = useState('');
+  const [receipt, setReceipt] = useState<string | undefined>(undefined);
 
   const amount = preset === 'all' ? outstanding : preset === 'half' ? half : parseAmount(otherText);
   const valid = amount !== null && amount > 0 && amount <= outstanding;
@@ -65,6 +67,7 @@ export default function PaymentSheet() {
       method,
       concept: theyPay ? `Pagament rebut (${PAYMENT_METHOD_LABELS[method]})` : `Pagament fet (${PAYMENT_METHOD_LABELS[method]})`,
       date,
+      ...(receipt ? { receipt } : {}),
       ...(note.trim() ? { note: note.trim() } : {}),
     });
     router.back();
@@ -158,6 +161,8 @@ export default function PaymentSheet() {
         </FieldRow>
         <TextField label="Nota" value={note} onChangeText={setNote} placeholder="Opcional" multiline last />
       </FieldGroup>
+
+      <ReceiptField value={receipt} onChange={setReceipt} />
 
       <View style={styles.result} accessibilityLiveRegion="polite">
         <Icon name={valid ? 'check' : 'payment'} size={18} color={valid ? colors.accent : colors.textMuted} />

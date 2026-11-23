@@ -135,3 +135,27 @@ describe('applyRemote', () => {
     );
   });
 });
+
+describe('receipt photos', () => {
+  it('round-trips the receipt file name', async () => {
+    const { movementToRow, rowToMovement } = await import('./merge.ts');
+    const m = { ...debt, receipt: 'abc.jpg' };
+    assert.deepEqual(rowToMovement({ ...movementToRow(m), updated_at: 'x', deleted_at: null }), m);
+  });
+
+  it('queues uploads and removals, cancelling a photo that never reached storage', async () => {
+    const { queueReceipts } = await import('./merge.ts');
+    let meta = queueReceipts(emptySyncMeta, ['a.jpg'], []);
+    meta = queueReceipts(meta, ['b.jpg'], ['a.jpg']); // replaced before syncing
+    assert.deepEqual(meta.receipts, { upload: ['b.jpg'], remove: [] });
+    meta = queueReceipts({ ...meta, receipts: { upload: [], remove: [] } }, [], ['b.jpg']); // after upload
+    assert.deepEqual(meta.receipts, { upload: [], remove: ['b.jpg'] });
+  });
+
+  it('uploads existing photos on the first sync and clears them once pushed', () => {
+    let d = adoptUser(data({ movements: [{ ...debt, receipt: 'r.jpg' }] }), 'u1');
+    assert.deepEqual(d.sync.receipts.upload, ['r.jpg']);
+    d = clearPushed(d, collectPush(d));
+    assert.deepEqual(d.sync.receipts.upload, []);
+  });
+});

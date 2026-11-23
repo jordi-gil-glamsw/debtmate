@@ -14,6 +14,7 @@ import { SegmentedControl } from '@/components/SegmentedControl';
 import { SheetHeader } from '@/components/SheetHeader';
 import { todayISO } from '@/domain/dates';
 import { parseAmount } from '@/domain/money';
+import { ReceiptField } from '@/features/receipts/ReceiptField';
 import { requestReminderPermission } from '@/features/reminders/notifications';
 import { refreshReminders } from '@/features/reminders/ReminderManager';
 import { addContact, addMovement, readState, useContactsWithBalance } from '@/store/store';
@@ -33,6 +34,7 @@ export default function NewMovementSheet() {
   const [newName, setNewName] = useState('');
   const [concept, setConcept] = useState('');
   const [note, setNote] = useState('');
+  const [receipt, setReceipt] = useState<string | undefined>(undefined);
   const today = todayISO();
   const [date, setDate] = useState(today);
   const [dueDate, setDueDate] = useState<string | undefined>(undefined);
@@ -51,6 +53,7 @@ export default function NewMovementSheet() {
       amountCents: amount,
       concept: concept.trim() || (direction === 'owed' ? 'Préstec' : 'Deute'),
       date,
+      ...(receipt ? { receipt } : {}),
       ...(note.trim() ? { note: note.trim() } : {}),
       dueDate,
     });
@@ -164,6 +167,8 @@ export default function NewMovementSheet() {
           <DueDateField value={dueDate} onChange={setDueDate} minimum={date} />
         </FieldRow>
       </FieldGroup>
+
+      <ReceiptField value={receipt} onChange={setReceipt} />
 
       <Button label="Desa el moviment" onPress={save} disabled={!canSave} />
     </ScrollView>

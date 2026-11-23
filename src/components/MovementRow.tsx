@@ -48,9 +48,12 @@ export function MovementRow({ movement, subtitle, onPress, onLongPress }: Props)
         <AppText variant="bodyStrong" numberOfLines={1}>
           {movement.concept}
         </AppText>
-        <AppText variant="small" color={colors.textMuted} numberOfLines={1}>
-          {line}
-        </AppText>
+        <View style={styles.lineRow}>
+          {movement.receipt ? <Icon name="photo" size={12} color={colors.textMuted} /> : null}
+          <AppText variant="small" color={colors.textMuted} numberOfLines={1} style={{ flexShrink: 1 }}>
+            {line}
+          </AppText>
+        </View>
         {movement.note ? (
           <AppText variant="small" color={colors.textFaint} numberOfLines={1} style={styles.note}>
             {movement.note}
@@ -76,4 +79,5 @@ const styles = StyleSheet.create({
   },
   middle: { flex: 1, gap: 1 },
   note: { fontStyle: 'italic' },
+  lineRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
 });

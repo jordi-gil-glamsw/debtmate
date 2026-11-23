@@ -5,7 +5,7 @@ import { useSession } from '@/features/account/session';
 import { completeOnboarding, readLocalData, subscribe } from '@/store/store';
 
 import { hasLocalChanges } from './merge';
-import { syncNow } from './sync';
+import { cleanupReceipts, syncNow } from './sync';
 
 const DEBOUNCE_MS = 1500;
 
@@ -16,6 +16,11 @@ const DEBOUNCE_MS = 1500;
 export function SyncManager() {
   const session = useSession();
   const userId = session?.user.id;
+
+  // Photos picked in a form that was then cancelled leave a file behind: tidy up on launch.
+  useEffect(() => {
+    cleanupReceipts();
+  }, []);
 
   useEffect(() => {
     if (!userId) return;

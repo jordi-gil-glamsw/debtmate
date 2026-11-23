@@ -2,7 +2,8 @@ import { useMemo, useSyncExternalStore } from 'react';
 
 import { balancesByContact, totals } from '@/domain/balances';
 import type { Contact, DebtMovement, Id, Movement, PaymentMovement } from '@/domain/types';
-import { emptySyncMeta, markChanged, markDeleted, type LocalData, type SyncMeta } from '@/sync/merge';
+import { cleanupLocalReceipts, deleteLocalReceipt } from '@/features/receipts/receipts';
+import { emptySyncMeta, markChanged, markDeleted, queueReceipts, type LocalData, type SyncMeta } from '@/sync/merge';
 
 import { loadRaw, saveRaw } from './persist';
 import { buildSampleData } from './sample';
@@ -129,6 +130,19 @@ export function useContactsWithBalance() {
 
 // ─── Actions ───────────────────────────────────────────────────────────────────
 
+const receiptsOf = (ms: readonly Movement[]) => ms.flatMap((m) => (m.receipt ? [m.receipt] : []));
+
+/** Deletes the device copies of photos that are no longer used (the account copy is queued for removal). */
+function forgetLocalReceipts(names: string[]): void {
+  for (const name of names) {
+    try {
+      deleteLocalReceipt(name);
+    } catch {
+      // best effort: a leftover file is cleaned up after the next sync
+    }
+  }
+}
+
 /** Returns the existing contact when the name matches (case-insensitive), otherwise creates it. */
 export function addContact(name: string): Contact {
   const trimmed = name.trim();
@@ -158,15 +172,18 @@ export function renameContact(id: Id, name: string): 'ok' | 'duplicate' | 'empty
 }
 
 export function deleteContact(id: Id): void {
+  const photos = receiptsOf(getState().movements.filter((m) => m.contactId === id));
   setState((s) => {
-    const movementIds = s.movements.filter((m) => m.contactId === id).map((m) => m.id);
+    const removed = s.movements.filter((m) => m.contactId === id);
+    const sync = markDeleted(markDeleted(s.sync, 'movements', removed.map((m) => m.id)), 'contacts', [id]);
     return {
       ...s,
       contacts: s.contacts.filter((c) => c.id !== id),
       movements: s.movements.filter((m) => m.contactId !== id),
-      sync: markDeleted(markDeleted(s.sync, 'movements', movementIds), 'contacts', [id]),
+      sync: queueReceipts(sync, [], receiptsOf(removed)),
     };
   });
+  forgetLocalReceipts(photos);
 }
 
 type NewMovement =
@@ -178,29 +195,34 @@ export function addMovement(input: NewMovement): Movement {
   setState((s) => ({
     ...s,
     movements: [...s.movements, movement],
-    sync: markChanged(s.sync, 'movements', [movement.id]),
+    sync: queueReceipts(markChanged(s.sync, 'movements', [movement.id]), [movement.receipt], []),
   }));
   return movement;
 }
 
-/** Replaces a movement (same id) with its edited version. */
+/** Replaces a movement (same id) with its edited version, including a new or removed photo. */
 export function updateMovement(movement: Movement): void {
-  setState((s) => {
-    if (!s.movements.some((m) => m.id === movement.id)) return s;
-    return {
-      ...s,
-      movements: s.movements.map((m) => (m.id === movement.id ? movement : m)),
-      sync: markChanged(s.sync, 'movements', [movement.id]),
-    };
-  });
+  const previous = getState().movements.find((m) => m.id === movement.id);
+  if (!previous) return;
+  const photoChanged = previous.receipt !== movement.receipt;
+  setState((s) => ({
+    ...s,
+    movements: s.movements.map((m) => (m.id === movement.id ? movement : m)),
+    sync: photoChanged
+      ? queueReceipts(markChanged(s.sync, 'movements', [movement.id]), [movement.receipt], [previous.receipt])
+      : markChanged(s.sync, 'movements', [movement.id]),
+  }));
+  if (photoChanged && previous.receipt) forgetLocalReceipts([previous.receipt]);
 }
 
 export function deleteMovement(id: Id): void {
+  const photos = receiptsOf(getState().movements.filter((m) => m.id === id));
   setState((s) => ({
     ...s,
     movements: s.movements.filter((m) => m.id !== id),
-    sync: markDeleted(s.sync, 'movements', [id]),
+    sync: queueReceipts(markDeleted(s.sync, 'movements', [id]), [], photos),
   }));
+  forgetLocalReceipts(photos);
 }
 
 export function updateSettings(patch: Partial<Settings>): void {
@@ -213,8 +235,9 @@ export function completeOnboarding(): void {
 
 /** Marks every current record as deleted, so the deletion also reaches the account. */
 function tombstoneAll(s: AppState): SyncMeta {
+  const withPhotos = queueReceipts(s.sync, [], receiptsOf(s.movements));
   const withMovements = markDeleted(
-    s.sync,
+    withPhotos,
     'movements',
     s.movements.map((m) => m.id),
   );
@@ -226,6 +249,7 @@ function tombstoneAll(s: AppState): SyncMeta {
 }
 
 export function loadSampleData(): void {
+  const photos = receiptsOf(getState().movements);
   const sample = buildSampleData(newId);
   setState((s) => {
     const cleared = tombstoneAll(s);
@@ -245,10 +269,13 @@ export function loadSampleData(): void {
       ),
     };
   });
+  forgetLocalReceipts(photos);
 }
 
 export function eraseAllData(): void {
+  const photos = receiptsOf(getState().movements);
   setState((s) => ({ ...s, contacts: [], movements: [], sync: tombstoneAll(s) }));
+  forgetLocalReceipts(photos);
 }
 
 /** Snapshot for non-React code (export, share). */
@@ -275,4 +302,9 @@ export function updateLocalData(update: (d: LocalData) => LocalData): void {
 /** After signing out: removes the account's data from this device (it stays in the cloud). */
 export function clearAccountData(): void {
   setState((s) => ({ ...s, contacts: [], movements: [], sync: emptySyncMeta }));
+  try {
+    cleanupLocalReceipts(new Set());
+  } catch {
+    // best effort
+  }
 }

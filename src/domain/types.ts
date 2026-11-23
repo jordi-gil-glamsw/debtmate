@@ -26,6 +26,8 @@ type MovementBase = {
   concept: string;
   date: string; // ISO date (YYYY-MM-DD)
   note?: string;
+  /** Receipt photo file name (e.g. '<uuid>.jpg'); stored on the device and in the account. */
+  receipt?: string;
   createdAt: string; // ISO timestamp
 };
 

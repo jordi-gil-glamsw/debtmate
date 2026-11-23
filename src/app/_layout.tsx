@@ -77,6 +77,7 @@ export default function RootLayout() {
             <Stack.Screen name="nou" options={{ ...sheetOptions, sheetAllowedDetents: [1] }} />
             <Stack.Screen name="pagament/[id]" options={{ ...sheetOptions, sheetAllowedDetents: [0.85, 1] }} />
             <Stack.Screen name="moviment/[id]" options={{ ...sheetOptions, sheetAllowedDetents: [1] }} />
+            <Stack.Screen name="tiquet/[name]" options={{ presentation: 'fullScreenModal', headerShown: false, contentStyle: { backgroundColor: '#000' } }} />
             <Stack.Screen name="contacte/[id]" options={{ ...sheetOptions, sheetAllowedDetents: [0.5, 1] }} />
           </Stack.Protected>
           <Stack.Protected guard={!onboarded} redirectTo="/">

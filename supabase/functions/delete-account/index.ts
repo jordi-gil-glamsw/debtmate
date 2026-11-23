@@ -47,6 +47,17 @@ Deno.serve(async (req) => {
   const { data, error } = await admin.auth.getUser(token);
   if (error || !data.user) return json({ error: 'unauthorized' }, 401);
 
+  // Supabase refuses to delete a user who still owns Storage objects: remove their receipt photos first.
+  const folder = data.user.id;
+  for (;;) {
+    const { data: files, error: listError } = await admin.storage.from('receipts').list(folder, { limit: 1000 });
+    if (listError) return json({ error: listError.message }, 500);
+    if (!files || files.length === 0) break;
+    const { error: removeError } = await admin.storage.from('receipts').remove(files.map((f) => `${folder}/${f.name}`));
+    if (removeError) return json({ error: removeError.message }, 500);
+    if (files.length < 1000) break;
+  }
+
   const { error: deleteError } = await admin.auth.admin.deleteUser(data.user.id);
   if (deleteError) return json({ error: deleteError.message }, 500);
 

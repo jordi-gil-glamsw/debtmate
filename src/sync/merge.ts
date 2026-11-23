@@ -19,6 +19,8 @@ export type SyncMeta = {
   /** Highest server `updated_at` already pulled, per table. */
   cursor: Record<Table, string | null>;
   lastSyncedAt: string | null;
+  /** Receipt photos to upload to / remove from the account's storage (file names). */
+  receipts: { upload: string[]; remove: string[] };
 };
 
 export type LocalData = {
@@ -33,6 +35,7 @@ export const emptySyncMeta: SyncMeta = {
   deleted: { contacts: [], movements: [] },
   cursor: { contacts: null, movements: null },
   lastSyncedAt: null,
+  receipts: { upload: [], remove: [] },
 };
 
 // ─── Remote rows (snake_case, as in supabase/migrations) ──────────────────────
@@ -56,6 +59,7 @@ export type MovementRow = {
   due_date: string | null;
   method: string | null;
   note: string | null;
+  receipt: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -80,6 +84,7 @@ export function movementToRow(m: Movement): MovementUpsert {
     due_date: m.kind === 'debt' ? (m.dueDate ?? null) : null,
     method: m.kind === 'payment' ? m.method : null,
     note: m.note ?? null,
+    receipt: m.receipt ?? null,
     created_at: m.createdAt,
   };
 }
@@ -97,6 +102,7 @@ export function rowToMovement(r: MovementRow): Movement {
     date: r.date,
     createdAt: r.created_at,
     ...(r.note ? { note: r.note } : {}),
+    ...(r.receipt ? { receipt: r.receipt } : {}),
   };
   if (r.kind === 'debt') {
     return {
@@ -138,9 +144,35 @@ export function markDeleted(meta: SyncMeta, table: Table, ids: Id[]): SyncMeta {
 
 export function hasLocalChanges(meta: SyncMeta): boolean {
   return (
-    meta.pending.contacts.length + meta.pending.movements.length + meta.deleted.contacts.length + meta.deleted.movements.length >
+    meta.pending.contacts.length +
+      meta.pending.movements.length +
+      meta.deleted.contacts.length +
+      meta.deleted.movements.length +
+      meta.receipts.upload.length +
+      meta.receipts.remove.length >
     0
   );
+}
+
+/** A receipt photo was added (upload it) or dropped (remove it from storage). */
+export function queueReceipts(meta: SyncMeta, added: (string | undefined)[], removed: (string | undefined)[]): SyncMeta {
+  const add = added.filter((n): n is string => Boolean(n));
+  const rem = removed.filter((n): n is string => Boolean(n));
+  if (add.length === 0 && rem.length === 0) return meta;
+  return {
+    ...meta,
+    receipts: {
+      // A photo removed before it was ever uploaded never needs to reach storage.
+      upload: without(union(meta.receipts.upload, add), rem),
+      remove: without(
+        union(
+          meta.receipts.remove,
+          rem.filter((n) => !meta.receipts.upload.includes(n)),
+        ),
+        add,
+      ),
+    },
+  };
 }
 
 /**
@@ -160,6 +192,13 @@ export function adoptUser(data: LocalData, userId: string): LocalData {
           contacts: union(data.sync.pending.contacts, data.contacts.map((c) => c.id)),
           movements: union(data.sync.pending.movements, data.movements.map((m) => m.id)),
         },
+        receipts: {
+          ...data.sync.receipts,
+          upload: union(
+            data.sync.receipts.upload,
+            data.movements.flatMap((m) => (m.receipt ? [m.receipt] : [])),
+          ),
+        },
         cursor: { contacts: null, movements: null },
       },
     };
@@ -172,6 +211,7 @@ export type PushBatch = {
   contacts: Contact[];
   movements: Movement[];
   deleted: Record<Table, Id[]>;
+  receipts: { upload: string[]; remove: string[] };
 };
 
 export function collectPush(data: LocalData): PushBatch {
@@ -181,6 +221,7 @@ export function collectPush(data: LocalData): PushBatch {
     contacts: data.contacts.filter((c) => pendingContacts.has(c.id)),
     movements: data.movements.filter((m) => pendingMovements.has(m.id)),
     deleted: { contacts: [...data.sync.deleted.contacts], movements: [...data.sync.deleted.movements] },
+    receipts: { upload: [...data.sync.receipts.upload], remove: [...data.sync.receipts.remove] },
   };
 }
 
@@ -201,6 +242,10 @@ export function clearPushed(data: LocalData, batch: PushBatch): LocalData {
       deleted: {
         contacts: without(data.sync.deleted.contacts, batch.deleted.contacts),
         movements: without(data.sync.deleted.movements, batch.deleted.movements),
+      },
+      receipts: {
+        upload: without(data.sync.receipts.upload, batch.receipts.upload),
+        remove: without(data.sync.receipts.remove, batch.receipts.remove),
       },
     },
   };

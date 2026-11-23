@@ -14,6 +14,9 @@ import { colors, fonts } from '@/theme/tokens';
 
 SplashScreen.preventAutoHideAsync();
 
+/** The stack's base screen. Without it, a cold start could fall back to /compte. */
+export const unstable_settings = { anchor: '(tabs)' };
+
 const theme: Theme = {
   ...DarkTheme,
   colors: {
@@ -66,14 +69,16 @@ export default function RootLayout() {
             headerBackButtonDisplayMode: 'minimal',
             contentStyle: { backgroundColor: colors.bg },
           }}>
-          <Stack.Protected guard={onboarded}>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          {/* Not guarded: on a cold start at "/" a guarded (tabs) made the navigator fall back to
+              its first screen (/compte). The tab layouts redirect to /benvinguda themselves. */}
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Protected guard={onboarded} redirectTo="/benvinguda">
             <Stack.Screen name="persona/[id]" options={{ title: '' }} />
             <Stack.Screen name="nou" options={{ ...sheetOptions, sheetAllowedDetents: [1] }} />
             <Stack.Screen name="pagament/[id]" options={{ ...sheetOptions, sheetAllowedDetents: [0.85, 1] }} />
             <Stack.Screen name="moviment/[id]" options={{ ...sheetOptions, sheetAllowedDetents: [1] }} />
           </Stack.Protected>
-          <Stack.Protected guard={!onboarded}>
+          <Stack.Protected guard={!onboarded} redirectTo="/">
             <Stack.Screen name="benvinguda" options={{ headerShown: false }} />
           </Stack.Protected>
           <Stack.Screen name="compte" options={{ ...sheetOptions, sheetAllowedDetents: [1] }} />

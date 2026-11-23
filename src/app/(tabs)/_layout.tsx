@@ -1,9 +1,13 @@
+import { Redirect } from 'expo-router';
 import { NativeTabs } from 'expo-router/native-tabs';
 
+import { useOnboarded } from '@/store/store';
 import { colors, fonts } from '@/theme/tokens';
 
 /** Native tab bar: UITabBar on iOS (Liquid Glass on iOS 26+), Material bottom navigation on Android. */
 export default function TabsLayout() {
+  const onboarded = useOnboarded();
+  if (!onboarded) return <Redirect href="/benvinguda" />;
   return (
     <NativeTabs
       backgroundColor={colors.surfaceRaised}

@@ -51,6 +51,11 @@ export function MovementRow({ movement, subtitle, onPress, onLongPress }: Props)
         <AppText variant="small" color={colors.textMuted} numberOfLines={1}>
           {line}
         </AppText>
+        {movement.note ? (
+          <AppText variant="small" color={colors.textFaint} numberOfLines={1} style={styles.note}>
+            {movement.note}
+          </AppText>
+        ) : null}
       </View>
       <AppText variant="amount" color={movement.kind === 'payment' ? colors.accent : color}>
         {formatMoney(effect, { sign: 'always', currency: false })}
@@ -70,4 +75,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   middle: { flex: 1, gap: 1 },
+  note: { fontStyle: 'italic' },
 });

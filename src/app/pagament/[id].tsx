@@ -7,7 +7,7 @@ import { AppText } from '@/components/AppText';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
 import { DateField } from '@/components/DateField';
-import { FieldGroup, FieldRow } from '@/components/Field';
+import { FieldGroup, FieldRow, TextField } from '@/components/Field';
 import { Icon } from '@/components/Icon';
 import { SheetHeader } from '@/components/SheetHeader';
 import { balanceOf } from '@/domain/balances';
@@ -34,6 +34,7 @@ export default function PaymentSheet() {
   const [method, setMethod] = useState<PaymentMethod>('bizum');
   const today = todayISO();
   const [date, setDate] = useState(today);
+  const [note, setNote] = useState('');
 
   const amount = preset === 'all' ? outstanding : preset === 'half' ? half : parseAmount(otherText);
   const valid = amount !== null && amount > 0 && amount <= outstanding;
@@ -64,6 +65,7 @@ export default function PaymentSheet() {
       method,
       concept: theyPay ? `Pagament rebut (${PAYMENT_METHOD_LABELS[method]})` : `Pagament fet (${PAYMENT_METHOD_LABELS[method]})`,
       date,
+      ...(note.trim() ? { note: note.trim() } : {}),
     });
     router.back();
   };
@@ -151,9 +153,10 @@ export default function PaymentSheet() {
       </View>
 
       <FieldGroup>
-        <FieldRow label="Data" last>
+        <FieldRow label="Data">
           <DateField value={date} onChange={setDate} maximum={today} accessibilityLabel="Data del pagament" />
         </FieldRow>
+        <TextField label="Nota" value={note} onChangeText={setNote} placeholder="Opcional" multiline last />
       </FieldGroup>
 
       <View style={styles.result} accessibilityLiveRegion="polite">

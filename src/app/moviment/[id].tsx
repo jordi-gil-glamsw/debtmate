@@ -48,6 +48,7 @@ function EditForm({ movement, contact }: { movement: Movement; contact: Contact 
 
   const [amountText, setAmountText] = useState(centsToInput(movement.amountCents));
   const [concept, setConcept] = useState(movement.concept);
+  const [note, setNote] = useState(movement.note ?? '');
   const [date, setDate] = useState(movement.date);
   const [direction, setDirection] = useState<'owed' | 'owe'>(movement.kind === 'debt' ? movement.direction : 'owed');
   const [dueDate, setDueDate] = useState<string | undefined>(movement.kind === 'debt' ? movement.dueDate : undefined);
@@ -66,7 +67,7 @@ function EditForm({ movement, contact }: { movement: Movement; contact: Contact 
       amountCents: amount,
       concept: concept.trim(),
       date,
-      ...(movement.note ? { note: movement.note } : {}),
+      ...(note.trim() ? { note: note.trim() } : {}),
     };
     updateMovement(
       movement.kind === 'debt'
@@ -138,6 +139,7 @@ function EditForm({ movement, contact }: { movement: Movement; contact: Contact 
 
       <FieldGroup>
         <TextField label="Concepte" value={concept} onChangeText={setConcept} placeholder="Sopar, entrades…" />
+        <TextField label="Nota" value={note} onChangeText={setNote} placeholder="Opcional" multiline />
         <FieldRow label="Data" last={!isDebt}>
           <DateField value={date} onChange={setDate} maximum={today} accessibilityLabel="Data del moviment" />
         </FieldRow>

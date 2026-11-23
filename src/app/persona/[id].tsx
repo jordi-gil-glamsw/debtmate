@@ -1,6 +1,6 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/AppText';
 import { Avatar } from '@/components/Avatar';
@@ -73,7 +73,24 @@ export default function PersonScreen() {
 
   return (
     <Screen topInset={false}>
-      <Stack.Screen options={{ title: contact.name }} />
+      <Stack.Screen
+        options={{
+          title: contact.name,
+          headerRight: () => (
+            <Pressable
+              onPress={() => router.push({ pathname: '/contacte/[id]', params: { id: contact.id } })}
+              accessibilityRole="button"
+              accessibilityLabel={`Edita ${contact.name}`}
+              hitSlop={8}
+              // Native headers add their own margin; the web header does not.
+              style={Platform.OS === 'web' ? { paddingHorizontal: space.lg } : undefined}>
+              <AppText variant="bodyStrong" color={colors.accent}>
+                Edita
+              </AppText>
+            </Pressable>
+          ),
+        }}
+      />
 
       <View style={styles.card}>
         <View style={styles.cardHead}>
@@ -150,7 +167,7 @@ export default function PersonScreen() {
             />
           ))}
           <AppText variant="small" color={colors.textFaint} style={{ marginTop: space.sm }}>
-            Mantén premut un moviment per esborrar-lo.
+            Toca un moviment per editar-lo. Mantén-lo premut per esborrar-lo.
           </AppText>
         </View>
       )}

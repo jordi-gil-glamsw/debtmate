@@ -143,6 +143,20 @@ export function addContact(name: string): Contact {
   return contact;
 }
 
+/** Renames a contact. Fails if another contact already has that name (case-insensitive). */
+export function renameContact(id: Id, name: string): 'ok' | 'duplicate' | 'empty' {
+  const trimmed = name.trim();
+  if (!trimmed) return 'empty';
+  const s = getState();
+  if (s.contacts.some((c) => c.id !== id && c.name.toLowerCase() === trimmed.toLowerCase())) return 'duplicate';
+  setState((st) => ({
+    ...st,
+    contacts: st.contacts.map((c) => (c.id === id ? { ...c, name: trimmed } : c)),
+    sync: markChanged(st.sync, 'contacts', [id]),
+  }));
+  return 'ok';
+}
+
 export function deleteContact(id: Id): void {
   setState((s) => {
     const movementIds = s.movements.filter((m) => m.contactId === id).map((m) => m.id);

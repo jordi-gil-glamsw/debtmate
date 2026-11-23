@@ -32,6 +32,7 @@ export default function NewMovementSheet() {
   const [creatingNew, setCreatingNew] = useState(!params.contactId && people.length === 0);
   const [newName, setNewName] = useState('');
   const [concept, setConcept] = useState('');
+  const [note, setNote] = useState('');
   const today = todayISO();
   const [date, setDate] = useState(today);
   const [dueDate, setDueDate] = useState<string | undefined>(undefined);
@@ -50,6 +51,7 @@ export default function NewMovementSheet() {
       amountCents: amount,
       concept: concept.trim() || (direction === 'owed' ? 'Préstec' : 'Deute'),
       date,
+      ...(note.trim() ? { note: note.trim() } : {}),
       dueDate,
     });
     router.back();
@@ -154,6 +156,7 @@ export default function NewMovementSheet() {
           <TextField label="Nom" value={newName} onChangeText={setNewName} placeholder="Nom de la persona" autoCapitalize="words" />
         ) : null}
         <TextField label="Concepte" value={concept} onChangeText={setConcept} placeholder="Sopar, entrades…" />
+        <TextField label="Nota" value={note} onChangeText={setNote} placeholder="Opcional" multiline />
         <FieldRow label="Data">
           <DateField value={date} onChange={setDate} maximum={today} accessibilityLabel="Data del deute" />
         </FieldRow>

@@ -24,6 +24,7 @@ const ICONS = {
   personAdd: { ios: 'person.badge.plus', android: 'person_add', web: 'person_add' },
   receipt: { ios: 'doc.text', android: 'receipt_long', web: 'receipt_long' },
   payment: { ios: 'eurosign.circle', android: 'payments', web: 'payments' },
+  bell: { ios: 'bell', android: 'notifications', web: 'notifications' },
   mail: { ios: 'envelope', android: 'mail', web: 'mail' },
   sync: { ios: 'arrow.triangle.2.circlepath', android: 'sync', web: 'sync' },
   cloud: { ios: 'icloud', android: 'cloud', web: 'cloud' },

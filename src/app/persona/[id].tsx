@@ -12,6 +12,7 @@ import { EmptyState, Screen, SectionHeader } from '@/components/Screen';
 import { balanceOf, settlementProgress, sortNewestFirst } from '@/domain/balances';
 import { formatShortDate, todayISO } from '@/domain/dates';
 import { formatMoney } from '@/domain/money';
+import { upcomingDueDates } from '@/domain/reminders';
 import type { Movement } from '@/domain/types';
 import { confirm, shareText } from '@/lib/dialogs';
 import { deleteContact, deleteMovement, useContact, useMovements } from '@/store/store';
@@ -41,14 +42,10 @@ export default function PersonScreen() {
   const movements = useMemo(() => allMovements.filter((m) => m.contactId === id), [allMovements, id]);
   const balance = useMemo(() => balanceOf(allMovements, id), [allMovements, id]);
   const progress = useMemo(() => settlementProgress(allMovements, id), [allMovements, id]);
-  const nextDue = useMemo(() => {
-    const today = todayISO();
-    const wanted = balance > 0 ? 'owed' : 'owe';
-    return movements
-      .filter((m) => m.kind === 'debt' && m.direction === wanted && m.dueDate && m.dueDate >= today)
-      .map((m) => (m.kind === 'debt' ? m.dueDate! : ''))
-      .sort()[0];
-  }, [movements, balance]);
+  const nextDue = useMemo(
+    () => (id ? upcomingDueDates(movements, id, balance, todayISO())[0] : undefined),
+    [movements, id, balance],
+  );
 
   if (!contact) {
     return (

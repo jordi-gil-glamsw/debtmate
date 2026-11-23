@@ -43,7 +43,14 @@
           "faceIDPermission": "DebtMate fa servir Face ID per protegir les teves dades."
         }
       ],
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      [
+        "expo-notifications",
+        {
+          "color": "#C8F169",
+          "enableRemoteNotifications": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

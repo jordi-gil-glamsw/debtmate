@@ -7,6 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
 import { LockGate } from '@/features/lock/LockGate';
+import { ReminderManager } from '@/features/reminders/ReminderManager';
 import { useOnboarded } from '@/store/store';
 import { SyncManager } from '@/sync/SyncManager';
 import { colors, fonts } from '@/theme/tokens';
@@ -54,6 +55,7 @@ export default function RootLayout() {
     <ThemeProvider value={theme}>
       <StatusBar style="light" />
       <SyncManager />
+      <ReminderManager />
       <LockGate>
         <Stack
           screenOptions={{

@@ -1,8 +1,8 @@
 import Constants from 'expo-constants';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { router } from 'expo-router';
-import type { ReactNode } from 'react';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Switch, View } from 'react-native';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { ActivityIndicator, AppState, Linking, Platform, Pressable, StyleSheet, Switch, View } from 'react-native';
 
 import { AppText } from '@/components/AppText';
 import { Avatar } from '@/components/Avatar';
@@ -10,8 +10,16 @@ import { Icon, type IconName } from '@/components/Icon';
 import { Screen } from '@/components/Screen';
 import { formatShortDate, toISODate } from '@/domain/dates';
 import { movementsToCsv } from '@/domain/export';
+import { planReminders } from '@/domain/reminders';
 import { authErrorMessage, deleteAccount, hasUnsyncedChanges, signOut } from '@/features/account/auth';
 import { accountName, cloudEnabled, useSession } from '@/features/account/session';
+import {
+  getReminderPermission,
+  remindersSupported,
+  requestReminderPermission,
+  sendTestReminder,
+  type ReminderPermission,
+} from '@/features/reminders/notifications';
 import { confirm, notify, shareText } from '@/lib/dialogs';
 import { eraseAllData, loadSampleData, readState, updateSettings, useSettings, useSyncMeta } from '@/store/store';
 import { hasLocalChanges, type SyncMeta } from '@/sync/merge';
@@ -71,6 +79,37 @@ async function toggleBiometricLock(next: boolean) {
   }
   const result = await LocalAuthentication.authenticateAsync({ promptMessage: 'Activa el bloqueig', cancelLabel: 'Cancel·la' });
   if (result.success) updateSettings({ biometricLock: true });
+}
+
+async function toggleReminders(next: boolean) {
+  if (!next) {
+    updateSettings({ reminders: false });
+    return;
+  }
+  const permission = await requestReminderPermission();
+  if (permission !== 'granted') {
+    const ok = await confirm(
+      'Notificacions desactivades',
+      'Per rebre els recordatoris, permet les notificacions de DebtMate als ajustos del dispositiu.',
+      'Obre els ajustos',
+    );
+    if (ok) Linking.openSettings();
+    return;
+  }
+  updateSettings({ reminders: true });
+}
+
+/** Development only: a real planned reminder (or a sample) in 5 seconds. */
+async function testReminder() {
+  if ((await requestReminderPermission()) !== 'granted') {
+    notify('Sense permís', 'Permet les notificacions per provar els recordatoris.');
+    return;
+  }
+  const { contacts, movements } = readState();
+  // Plan as if it were far in the past, so every pending due date counts.
+  const sample = planReminders(contacts, movements, new Date(2000, 0, 1))[0];
+  await sendTestReminder(sample);
+  notify('Recordatori programat', 'Arribarà d’aquí a 5 segons. Surt de l’app per veure’l com a notificació.');
 }
 
 async function exportCsv() {
@@ -198,6 +237,20 @@ function AccountCard() {
 export default function SettingsScreen() {
   const settings = useSettings();
   const session = useSession();
+  const [reminderPermission, setReminderPermission] = useState<ReminderPermission>('undetermined');
+  const checkPermission = useCallback(() => {
+    getReminderPermission().then(setReminderPermission, () => {});
+  }, []);
+
+  // Re-check when coming back from the system settings.
+  useEffect(() => {
+    if (!remindersSupported) return;
+    checkPermission();
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') checkPermission();
+    });
+    return () => sub.remove();
+  }, [checkPermission]);
   const biometricLabel = Platform.OS === 'ios' ? 'Bloqueja amb Face ID' : 'Bloqueja amb empremta';
 
   return (
@@ -210,6 +263,32 @@ export default function SettingsScreen() {
           <Row label="Tanca la sessió" icon="signOut" onPress={askSignOut} />
           <Row label="Elimina el compte" icon="deleteAccount" onPress={askDeleteAccount} danger last />
         </Section>
+      ) : null}
+
+      {remindersSupported ? (
+        <Section title="Recordatoris">
+          {__DEV__ ? <Row label="Prova un recordatori (5 s)" icon="bell" onPress={testReminder} /> : null}
+          <Row
+            label="Avisa'm el dia límit"
+            icon="bell"
+            last
+            right={
+              <Switch
+                value={settings.reminders && reminderPermission === 'granted'}
+                onValueChange={(next) => toggleReminders(next).then(checkPermission)}
+                accessibilityLabel="Avisa'm el dia de la data límit"
+                trackColor={{ true: colors.success, false: colors.surfaceMuted }}
+              />
+            }
+          />
+        </Section>
+      ) : null}
+      {remindersSupported ? (
+        <AppText variant="small" color={colors.textMuted} style={styles.footnote}>
+          {reminderPermission === 'denied'
+            ? 'Les notificacions estan desactivades als ajustos del dispositiu.'
+            : 'A les 10:00 del dia acordat, si encara queda alguna cosa pendent.'}
+        </AppText>
       ) : null}
 
       {Platform.OS !== 'web' ? (
@@ -262,5 +341,6 @@ const styles = StyleSheet.create({
   },
   group: { backgroundColor: colors.surface, borderRadius: radius.lg, overflow: 'hidden' },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingHorizontal: 14, minHeight: touchTarget + 6 },
+  footnote: { marginTop: -space.md, marginHorizontal: space.xs },
   rowDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
 });

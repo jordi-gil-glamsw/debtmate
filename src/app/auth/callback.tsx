@@ -10,7 +10,7 @@ import { colors } from '@/theme/tokens';
 const TIMEOUT_MS = 4000;
 
 /**
- * Target of debtmate://auth/callback: an email link or the Google redirect opening the app.
+ * Target of ovia://auth/callback: an email link or the Google redirect opening the app.
  * Reads the session from the URL, then goes home (SyncManager takes over from there).
  * On web the Supabase client reads the URL by itself.
  */

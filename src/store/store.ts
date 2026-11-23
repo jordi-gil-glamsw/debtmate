@@ -42,7 +42,8 @@ export type AppState = {
   sync: SyncMeta;
 };
 
-const STORAGE_KEY = 'debtmate:state:v1';
+const STORAGE_KEY = 'ovia:state:v1';
+const LEGACY_STORAGE_KEY = 'debtmate:state:v1';
 
 const initialState: AppState = {
   version: 1,
@@ -56,7 +57,9 @@ let state: AppState | null = null;
 const listeners = new Set<() => void>();
 
 function load(): AppState {
-  const raw = loadRaw(STORAGE_KEY);
+  // Dades desades abans del canvi de nom (l'app es deia DebtMate): es llegeixen un cop i
+  // la primera escriptura ja les deixa sota la clau nova.
+  const raw = loadRaw(STORAGE_KEY) ?? loadRaw(LEGACY_STORAGE_KEY);
   if (!raw) return initialState;
   try {
     const parsed = JSON.parse(raw) as Partial<AppState>;

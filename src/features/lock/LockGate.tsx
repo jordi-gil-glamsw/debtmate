@@ -10,7 +10,7 @@ import { colors, space } from '@/theme/tokens';
 
 function requestUnlock(): Promise<boolean> {
   return LocalAuthentication.authenticateAsync({
-    promptMessage: 'Desbloqueja DebtMate',
+    promptMessage: 'Desbloqueja Ovia',
     cancelLabel: 'Cancel·la',
     disableDeviceFallback: false,
   }).then((r) => r.success);
@@ -75,7 +75,7 @@ export function LockGate({ children }: { children: ReactNode }) {
       {locked ? (
         <View style={[StyleSheet.absoluteFill, styles.overlay]}>
           <Icon name="lock" size={40} color={colors.accent} />
-          <AppText variant="title">DebtMate està bloquejat</AppText>
+          <AppText variant="title">Ovia està bloquejat</AppText>
           <Button label="Desbloqueja" onPress={unlock} style={{ alignSelf: 'stretch' }} />
         </View>
       ) : null}

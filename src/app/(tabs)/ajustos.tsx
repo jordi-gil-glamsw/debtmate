@@ -90,7 +90,7 @@ async function toggleReminders(next: boolean) {
   if (permission !== 'granted') {
     const ok = await confirm(
       'Notificacions desactivades',
-      'Per rebre els recordatoris, permet les notificacions de DebtMate als ajustos del dispositiu.',
+      'Per rebre els recordatoris, permet les notificacions de Ovia als ajustos del dispositiu.',
       'Obre els ajustos',
     );
     if (ok) Linking.openSettings();
@@ -119,7 +119,7 @@ async function exportCsv() {
     notify('Res a exportar', 'Encara no hi ha cap moviment.');
     return;
   }
-  await shareText(movementsToCsv(contacts, movements), `debtmate-${toISODate(new Date())}.csv`);
+  await shareText(movementsToCsv(contacts, movements), `ovia-${toISODate(new Date())}.csv`);
 }
 
 async function askLoadSample() {
@@ -318,7 +318,7 @@ export default function SettingsScreen() {
       </Section>
 
       <AppText variant="small" color={colors.textMuted} style={{ textAlign: 'center' }}>
-        DebtMate {Constants.expoConfig?.version ?? ''}
+        Ovia {Constants.expoConfig?.version ?? ''}
       </AppText>
     </Screen>
   );

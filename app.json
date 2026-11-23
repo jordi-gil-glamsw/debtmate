@@ -1,19 +1,21 @@
 {
   "expo": {
-    "name": "DebtMate",
-    "slug": "debtmate",
+    "name": "Ovia",
+    "slug": "ovia",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "debtmate",
+    "scheme": "ovia",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0E0F13",
     "ios": {
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/ovia.icon",
+      "bundleIdentifier": "com.jordigil.ovia",
       "supportsTablet": true,
       "usesAppleSignIn": true
     },
     "android": {
+      "package": "com.jordigil.ovia",
       "adaptiveIcon": {
         "backgroundColor": "#0E0F13",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -44,7 +46,7 @@
       [
         "expo-local-authentication",
         {
-          "faceIDPermission": "DebtMate fa servir Face ID per protegir les teves dades."
+          "faceIDPermission": "Ovia fa servir Face ID per protegir les teves dades."
         }
       ],
       "expo-apple-authentication",
@@ -67,8 +69,9 @@
         }
       },
       "eas": {
-        "projectId": "5afc4347-39f7-4862-a100-784e03320778"
+        "projectId": "150d0fed-7308-4a10-9bb4-223e131e9f60"
       }
-    }
+    },
+    "owner": "jordi-gil"
   }
 }

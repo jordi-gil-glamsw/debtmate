@@ -1,4 +1,4 @@
--- DebtMate · groups and shared group expenses.
+-- Ovia · groups and shared group expenses.
 -- Mirrors Group and GroupExpense in src/domain/types.ts. The debts an expense creates between
 -- me and each person are derived in the app (src/domain/groups.ts), never stored.
 

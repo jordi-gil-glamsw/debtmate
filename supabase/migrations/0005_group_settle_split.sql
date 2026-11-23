@@ -1,4 +1,4 @@
--- DebtMate · exact-amount splits and payments that settle a group.
+-- Ovia · exact-amount splits and payments that settle a group.
 -- Run after 0004_groups.sql.
 
 -- An expense can be shared in equal parts (default) or with an exact amount per person.

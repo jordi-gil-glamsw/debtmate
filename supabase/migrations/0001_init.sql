@@ -1,4 +1,4 @@
--- DebtMate · initial schema (not applied yet; for the upcoming cloud-sync phase).
+-- Ovia · initial schema (not applied yet; for the upcoming cloud-sync phase).
 -- Mirrors src/domain/types.ts. Amounts in integer cents. Balances are derived, never stored.
 -- Soft deletes (deleted_at) + updated_at make incremental sync between devices possible.
 

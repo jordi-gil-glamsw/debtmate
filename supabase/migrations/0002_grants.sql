@@ -1,4 +1,4 @@
--- DebtMate · explicit Data API privileges.
+-- Ovia · explicit Data API privileges.
 -- Newer Supabase projects don't expose new tables to the API roles automatically.
 -- Only signed-in users get access; row level security (0001) still limits them to their own rows.
 -- No privileges for `anon`: without a session nothing is readable.

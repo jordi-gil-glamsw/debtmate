@@ -65,7 +65,7 @@ export default function WebTabsLayout() {
     <Tabs style={[styles.root, desktop && styles.row]}>
       {desktop ? (
         <View style={styles.sidebar} accessibilityRole="tablist">
-          <AppText style={styles.brand}>debtmate</AppText>
+          <AppText style={styles.brand}>ovia</AppText>
           <View style={styles.sideItems}>{triggers(false)}</View>
         </View>
       ) : null}

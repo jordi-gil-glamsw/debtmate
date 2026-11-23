@@ -25,7 +25,7 @@ const PROBLEMS = {
   amount: null, // the amount field shows its own hint
   nobody: 'Marca qui hi era.',
   sum: null, // shown with the exact amounts
-  notMine: 'DebtMate només guarda els teus deutes i aquesta despesa no en crea cap. Si hi eres, marca’t a «Qui hi era?».',
+  notMine: 'Ovia només guarda els teus deutes i aquesta despesa no en crea cap. Si hi eres, marca’t a «Qui hi era?».',
 } as const;
 
 /** New group expense (?grup=) or edit one (?id=). Split in equal parts or by exact amounts. */

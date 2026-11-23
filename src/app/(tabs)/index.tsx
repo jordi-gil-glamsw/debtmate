@@ -35,7 +35,7 @@ function MobileHome() {
 
   return (
     <Screen
-      title="debtmate"
+      title="ovia"
       titleAccessory={
         <AppText variant="caption" color={colors.textMuted}>
           {pending.length === 1 ? '1 persona' : `${pending.length} persones`}

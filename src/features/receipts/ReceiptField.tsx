@@ -54,7 +54,7 @@ export function ReceiptField({ value, onChange }: Props) {
       if ('error' in result) {
         const ok = await confirm(
           'Sense accés a la càmera',
-          'Permet l’accés a la càmera de DebtMate als ajustos del dispositiu.',
+          'Permet l’accés a la càmera de Ovia als ajustos del dispositiu.',
           'Obre els ajustos',
         );
         if (ok) Linking.openSettings();

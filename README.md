@@ -1,4 +1,4 @@
-# DebtMate
+# Ovia
 
 App per controlar els deutes amb amics i família: què et deuen, què deus i com es van liquidant.
 Una sola base de codi (Expo / React Native) per a **iOS i Android natius** i **web**.
@@ -45,9 +45,9 @@ Per activar els comptes:
 3. Copia `.env.example` a `.env.local` i omple'l amb la URL i la *publishable key*
    (*Project Settings → API Keys*). Reinicia `npx expo start`.
 4. **Correu amb codi**: a *Authentication → Email Templates → Magic Link*, posa el codi al missatge,
-   per exemple `<p>El teu codi de DebtMate: {{ .Token }}</p>`. Sense `{{ .Token }}` arriba un enllaç en lloc d'un codi.
+   per exemple `<p>El teu codi d’Ovia: {{ .Token }}</p>`. Sense `{{ .Token }}` arriba un enllaç en lloc d'un codi.
 5. **Adreces de retorn**: a *Authentication → URL Configuration → Redirect URLs*, afegeix
-   `debtmate://**`, `exp://**` (per provar amb Expo Go) i l'adreça del web (p. ex. `http://localhost:8081`).
+   `ovia://**`, `exp://**` (per provar amb Expo Go) i l'adreça del web (p. ex. `http://localhost:8081`).
 6. **Google**: a Google Cloud, crea un client OAuth de tipus *Web application* amb l'URI de redirecció
    `https://<projecte>.supabase.co/auth/v1/callback`. Després posa'n l'ID i el secret a *Authentication → Providers → Google*.
    Mentre la pantalla de consentiment de Google sigui en mode de proves, només hi entren els *Test users*;
@@ -127,7 +127,7 @@ Fet:
   pagament lligat al grup, que també compta al saldo total) i compartir el resum del grup o d’una
   despesa per WhatsApp
 
-- Web publicat a https://debtmate.expo.app (EAS Hosting). Per tornar-lo a publicar: `npm run deploy:web`
+- Web publicat a https://jordi-gil-ovia.expo.app (EAS Hosting). Per tornar-lo a publicar: `npm run deploy:web`
   (cal `.env.local` amb les variables de Supabase, i haver fet `npx eas-cli@latest login`).
   Fa servir `web.output: "server"` perquè les rutes dinàmiques (`/persona/<id>`, `/grup/<id>`…)
   funcionin en entrar-hi directament o en recarregar

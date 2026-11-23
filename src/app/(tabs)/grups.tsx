@@ -79,7 +79,7 @@ export default function GroupsScreen() {
       {rows.length === 0 ? (
         <EmptyState
           title="Encara no tens cap grup"
-          message="Crea un grup per als dinars amb la colla o un viatge. Apunta qui paga cada despesa i DebtMate la reparteix a parts iguals."
+          message="Crea un grup per als dinars amb la colla o un viatge. Apunta qui paga cada despesa i Ovia la reparteix a parts iguals."
           action={<Button label="Crea un grup" icon="add" onPress={create} style={{ marginTop: space.sm }} />}
         />
       ) : (

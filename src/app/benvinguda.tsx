@@ -14,7 +14,7 @@ export default function WelcomeScreen() {
   return (
     <View style={[styles.root, { paddingTop: insets.top + space.xl, paddingBottom: insets.bottom + space.xl }]}>
       <AppText variant="title" style={styles.brand}>
-        debtmate
+        ovia
       </AppText>
 
       <View style={styles.hero}>

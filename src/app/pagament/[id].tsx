@@ -11,22 +11,33 @@ import { FieldGroup, FieldRow, TextField } from '@/components/Field';
 import { Icon } from '@/components/Icon';
 import { SheetHeader } from '@/components/SheetHeader';
 import { balanceOf } from '@/domain/balances';
+import { groupBalances } from '@/domain/groups';
 import { todayISO } from '@/domain/dates';
 import { centsToInput, formatMoney, parseAmount } from '@/domain/money';
 import { PAYMENT_METHOD_LABELS, type PaymentMethod } from '@/domain/types';
 import { ReceiptField } from '@/features/receipts/ReceiptField';
-import { addMovement, useContact, useMovements } from '@/store/store';
+import { addMovement, useContact, useContacts, useExpenses, useGroup, useMovements } from '@/store/store';
 import { colors, fonts, radius, space, sheetMaxWidth } from '@/theme/tokens';
 
 type Preset = 'all' | 'half' | 'other';
 const METHODS = Object.keys(PAYMENT_METHOD_LABELS) as PaymentMethod[];
 
+/** Records a payment with a person (?grup=: settles what's pending from that group). */
 export default function PaymentSheet() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, grup } = useLocalSearchParams<{ id: string; grup?: string }>();
   const insets = useSafeAreaInsets();
   const contact = useContact(id);
   const movements = useMovements();
-  const balance = useMemo(() => balanceOf(movements, id), [movements, id]);
+  const group = useGroup(grup);
+  const expenses = useExpenses();
+  const contacts = useContacts();
+  const balance = useMemo(() => {
+    if (!group) return balanceOf(movements, id);
+    const ids = new Set(contacts.map((c) => c.id));
+    const payments = movements.filter((m) => m.kind === 'payment' && m.groupId === group.id);
+    const own = expenses.filter((e) => e.groupId === group.id);
+    return groupBalances(own, payments, (cid) => ids.has(cid)).get(id) ?? 0;
+  }, [movements, id, group, expenses, contacts]);
   const outstanding = Math.abs(balance);
   const half = Math.floor(outstanding / 2);
 
@@ -65,7 +76,12 @@ export default function PaymentSheet() {
       contactId: contact.id,
       amountCents: amount,
       method,
-      concept: theyPay ? `Pagament rebut (${PAYMENT_METHOD_LABELS[method]})` : `Pagament fet (${PAYMENT_METHOD_LABELS[method]})`,
+      concept: group
+        ? `Liquidació · ${group.name}`
+        : theyPay
+          ? `Pagament rebut (${PAYMENT_METHOD_LABELS[method]})`
+          : `Pagament fet (${PAYMENT_METHOD_LABELS[method]})`,
+      ...(group ? { groupId: group.id } : {}),
       date,
       ...(receipt ? { receipt } : {}),
       ...(note.trim() ? { note: note.trim() } : {}),
@@ -78,7 +94,9 @@ export default function PaymentSheet() {
       ? `L’import supera el deute (${formatMoney(outstanding)})`
       : 'Escriu l’import del pagament'
     : remaining === 0
-      ? `Quedareu al dia amb ${firstName}`
+      ? group
+        ? `Quedareu al dia amb ${firstName} en aquest grup`
+        : `Quedareu al dia amb ${firstName}`
       : theyPay
         ? `Encara et deurà ${formatMoney(remaining)}`
         : `Encara li deuràs ${formatMoney(remaining)}`;
@@ -102,7 +120,7 @@ export default function PaymentSheet() {
           {title}
         </AppText>
         <AppText variant="caption" color={colors.textMuted}>
-          Deute pendent: {formatMoney(outstanding)}
+          {group ? `Pendent de «${group.name}»` : 'Deute pendent'}: {formatMoney(outstanding)}
         </AppText>
       </View>
 

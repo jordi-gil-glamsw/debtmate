@@ -34,6 +34,8 @@ type MovementBase = {
    * never stored: edit or delete the expense instead.
    */
   expenseId?: Id;
+  /** On a payment: it settles debts from this group's expenses (it still counts for the person). */
+  groupId?: Id;
 };
 
 /** A new debt. `owed` = the contact owes me; `owe` = I owe the contact. */
@@ -77,6 +79,10 @@ export type GroupExpense = {
   participantIds: Id[];
   /** Whether I took part (had my share). */
   includesMe: boolean;
+  /** How the total is shared: equal parts (default) or an exact amount per person. */
+  split?: 'equal' | 'exact';
+  /** With split 'exact': cents per person, keyed by contact id or 'me'. */
+  shares?: Record<string, number>;
   note?: string;
   createdAt: string;
 };

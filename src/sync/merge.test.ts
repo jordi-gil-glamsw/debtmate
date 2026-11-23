@@ -210,6 +210,16 @@ describe('groups and expenses', () => {
     assert.equal(d.sync.cursor.contacts, null);
   });
 
+  it('round-trips exact splits and group payments', () => {
+    const exact: GroupExpense = { ...expense, split: 'exact', shares: { me: 1000, c1: 5000, c2: 3000 } };
+    assert.deepEqual(rowToExpense({ ...expenseToRow(exact), ...meta }), exact);
+    assert.equal(expenseToRow(expense).split, 'equal');
+    assert.equal(expenseToRow(expense).shares, null);
+    const settle: Movement = { ...payment, groupId: 'g1' };
+    assert.deepEqual(rowToMovement({ ...movementToRow(settle), updated_at: 'x', deleted_at: null }), settle);
+    assert.equal(movementToRow(payment).group_id, null);
+  });
+
   it('upgrades sync state saved before groups existed', () => {
     const old = { userId: 'u1', pending: { contacts: ['c1'], movements: [] }, cursor: { contacts: 'x', movements: 'y' } };
     const meta = normalizeSyncMeta(old as never);

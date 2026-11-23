@@ -71,6 +71,7 @@ function EditForm({ movement, contact }: { movement: Movement; contact: Contact 
       date,
       ...(receipt ? { receipt } : {}),
       ...(note.trim() ? { note: note.trim() } : {}),
+      ...(movement.groupId ? { groupId: movement.groupId } : {}),
     };
     updateMovement(
       movement.kind === 'debt'

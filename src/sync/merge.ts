@@ -86,6 +86,7 @@ export type MovementRow = {
   method: string | null;
   note: string | null;
   receipt: string | null;
+  group_id: Id | null;
   created_at: string;
 } & RowMeta;
 
@@ -105,6 +106,8 @@ export type ExpenseRow = {
   paid_by: Id | null;
   participant_ids: Id[];
   includes_me: boolean;
+  split: 'equal' | 'exact';
+  shares: Record<string, number> | null;
   note: string | null;
   created_at: string;
 } & RowMeta;
@@ -141,6 +144,7 @@ export function movementToRow(m: Movement, { withReceipt = true }: { withReceipt
     due_date: m.kind === 'debt' ? (m.dueDate ?? null) : null,
     method: m.kind === 'payment' ? m.method : null,
     note: m.note ?? null,
+    group_id: m.groupId ?? null,
     ...(withReceipt ? { receipt: m.receipt ?? null } : {}),
     created_at: m.createdAt,
   };
@@ -160,6 +164,8 @@ export function expenseToRow(e: GroupExpense): ExpenseUpsert {
     paid_by: e.paidBy,
     participant_ids: e.participantIds,
     includes_me: e.includesMe,
+    split: e.split ?? 'equal',
+    shares: e.split === 'exact' ? (e.shares ?? {}) : null,
     note: e.note ?? null,
     created_at: e.createdAt,
   };
@@ -179,6 +185,7 @@ export function rowToMovement(r: MovementRow): Movement {
     createdAt: r.created_at,
     ...(r.note ? { note: r.note } : {}),
     ...(r.receipt ? { receipt: r.receipt } : {}),
+    ...(r.group_id ? { groupId: r.group_id } : {}),
   };
   if (r.kind === 'debt') {
     return {
@@ -210,6 +217,7 @@ export function rowToExpense(r: ExpenseRow): GroupExpense {
     paidBy: r.paid_by,
     participantIds: r.participant_ids ?? [],
     includesMe: r.includes_me,
+    ...(r.split === 'exact' ? { split: 'exact' as const, shares: r.shares ?? {} } : {}),
     ...(r.note ? { note: r.note } : {}),
     createdAt: r.created_at,
   };

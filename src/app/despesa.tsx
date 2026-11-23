@@ -9,21 +9,26 @@ import { Button } from '@/components/Button';
 import { DateField } from '@/components/DateField';
 import { FieldGroup, FieldRow, TextField } from '@/components/Field';
 import { Icon } from '@/components/Icon';
+import { SegmentedControl } from '@/components/SegmentedControl';
 import { SheetHeader } from '@/components/SheetHeader';
 import { todayISO } from '@/domain/dates';
-import { expenseMovements, expenseProblem, expenseShares, ME } from '@/domain/groups';
+import { exactDifference, expenseMovements, expenseProblem, expenseShareMessage, expenseShares, ME } from '@/domain/groups';
 import { centsToInput, formatMoney, parseAmount } from '@/domain/money';
-import { confirm } from '@/lib/dialogs';
+import type { GroupExpense } from '@/domain/types';
+import { confirm, shareText } from '@/lib/dialogs';
 import { addExpense, deleteExpense, updateExpense, useContacts, useExpense, useGroup } from '@/store/store';
 import { colors, fonts, radius, sheetMaxWidth, space, touchTarget } from '@/theme/tokens';
+
+type Split = 'equal' | 'exact';
 
 const PROBLEMS = {
   amount: null, // the amount field shows its own hint
   nobody: 'Marca qui hi era.',
-  notMine: 'DebtMate només guarda els teus deutes: aquesta despesa no et toca. Si hi eres, marca’t a «Qui hi era?».',
+  sum: null, // shown with the exact amounts
+  notMine: 'DebtMate només guarda els teus deutes i aquesta despesa no en crea cap. Si hi eres, marca’t a «Qui hi era?».',
 } as const;
 
-/** New group expense (?grup=) or edit one (?id=). Split in equal parts. */
+/** New group expense (?grup=) or edit one (?id=). Split in equal parts or by exact amounts. */
 export default function ExpenseSheet() {
   const params = useLocalSearchParams<{ grup?: string; id?: string }>();
   const existing = useExpense(params.id);
@@ -47,6 +52,10 @@ export default function ExpenseSheet() {
   const [selected, setSelected] = useState<string[]>(() =>
     existing ? [...(existing.includesMe ? [ME] : []), ...existing.participantIds] : [ME, ...(group?.memberIds ?? [])],
   );
+  const [split, setSplit] = useState<Split>(existing?.split ?? 'equal');
+  const [exactText, setExactText] = useState<Record<string, string>>(() =>
+    Object.fromEntries(Object.entries(existing?.shares ?? {}).map(([k, v]) => [k, centsToInput(v)])),
+  );
 
   if (!group || (params.id && !existing)) {
     return (
@@ -60,21 +69,47 @@ export default function ExpenseSheet() {
   }
 
   const amount = parseAmount(amountText) ?? 0;
+  const includesMe = selected.includes(ME);
+  const participantIds = selected.filter((s) => s !== ME && names.has(s));
+  const people = [...(includesMe ? [ME] : []), ...participantIds];
+  const exactShares = Object.fromEntries(people.map((p) => [p, parseAmount(exactText[p] ?? '') ?? 0]));
   const draft = {
     amountCents: amount,
     paidBy,
-    includesMe: selected.includes(ME),
-    participantIds: selected.filter((s) => s !== ME && names.has(s)),
+    includesMe,
+    participantIds,
+    ...(split === 'exact' ? { split: 'exact' as const, shares: exactShares } : {}),
   };
   const problem = expenseProblem(draft);
   const canSave = problem === null;
   const shares = expenseShares(draft);
-  const debts = expenseMovements({ ...draft, id: '', groupId: group.id, concept: '', date, createdAt: '' }, (cid) => names.has(cid));
+  const difference = split === 'exact' ? exactDifference(draft) : 0;
+  const preview: GroupExpense = {
+    ...draft,
+    id: existing?.id ?? '',
+    groupId: group.id,
+    concept: concept.trim() || 'Despesa',
+    date,
+    createdAt: existing?.createdAt ?? '',
+  };
+  const debts = expenseMovements(preview, (cid) => names.has(cid));
   const owedToMe = debts.filter((d) => d.direction === 'owed').reduce((s, d) => s + d.amountCents, 0);
   const iOwe = debts.filter((d) => d.direction === 'owe').reduce((s, d) => s + d.amountCents, 0);
 
   const toggle = (who: string) => setSelected((s) => (s.includes(who) ? s.filter((x) => x !== who) : [...s, who]));
   const label = (who: string | null) => (who === null || who === ME ? 'Tu' : (names.get(who) ?? '—'));
+
+  const changeSplit = (next: Split) => {
+    if (next === 'exact') {
+      // Start from the equal parts, so only the differences need typing.
+      const equal = expenseShares({ ...draft, split: 'equal' });
+      setExactText((t) => ({
+        ...Object.fromEntries([...equal].map(([p, cents]) => [p, amount > 0 ? centsToInput(cents) : ''])),
+        ...Object.fromEntries(Object.entries(t).filter(([, v]) => v.trim() !== '')),
+      }));
+    }
+    setSplit(next);
+  };
 
   const save = () => {
     if (!canSave) return;
@@ -84,15 +119,21 @@ export default function ExpenseSheet() {
       amountCents: amount,
       date,
       paidBy,
-      participantIds: draft.participantIds,
-      includesMe: draft.includesMe,
+      participantIds,
+      includesMe,
+      ...(split === 'exact' ? { split: 'exact' as const, shares: exactShares } : {}),
       ...(note.trim() ? { note: note.trim() } : {}),
     };
     if (existing) {
-      const { note: _old, ...rest } = existing;
+      const { note: _note, split: _split, shares: _shares, ...rest } = existing;
       updateExpense({ ...rest, ...fields });
     } else addExpense(fields);
     router.back();
+  };
+
+  const onShare = () => {
+    const expense = canSave ? { ...preview, ...(note.trim() ? { note: note.trim() } : {}) } : existing;
+    if (expense) shareText(expenseShareMessage(expense, (cid) => names.get(cid)));
   };
 
   const onDelete = async () => {
@@ -155,10 +196,10 @@ export default function ExpenseSheet() {
                 key={who ?? ME}
                 onPress={() => setPaidBy(who)}
                 accessibilityRole="radio"
-                accessibilityLabel={who === null ? 'Tu' : label(who)}
+                accessibilityLabel={label(who)}
                 accessibilityState={{ selected: isSelected }}
                 style={[styles.payer, isSelected && styles.payerSelected]}>
-                <Avatar name={who === null ? 'Tu' : label(who)} size={32} />
+                <Avatar name={label(who)} size={32} />
                 <AppText variant="small" numberOfLines={1} style={{ maxWidth: 64 }}>
                   {who === null ? 'Tu' : label(who).split(' ')[0]}
                 </AppText>
@@ -170,31 +211,66 @@ export default function ExpenseSheet() {
 
       <View style={{ gap: space.sm }}>
         <AppText variant="captionStrong" color={colors.textMuted}>
-          Qui hi era? · a parts iguals
+          Qui hi era?
         </AppText>
+        <SegmentedControl
+          accessibilityLabel="Com es reparteix"
+          value={split}
+          onChange={changeSplit}
+          options={[
+            { value: 'equal', label: 'A parts iguals' },
+            { value: 'exact', label: 'Per imports' },
+          ]}
+        />
         <View style={styles.list}>
           {[ME, ...pool].map((who, i, all) => {
             const on = selected.includes(who);
             const share = on ? (shares.get(who) ?? 0) : 0;
             return (
-              <Pressable
-                key={who}
-                onPress={() => toggle(who)}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: on }}
-                accessibilityLabel={`${label(who)}${on && amount > 0 ? `, ${formatMoney(share)}` : ''}`}
-                style={[styles.member, i < all.length - 1 && styles.divider]}>
-                <View style={[styles.check, on && styles.checkOn]}>{on ? <Icon name="check" size={14} color={colors.onAccent} /> : null}</View>
-                <AppText variant="bodyStrong" numberOfLines={1} style={{ flex: 1 }} color={on ? colors.text : colors.textMuted}>
-                  {label(who)}
-                </AppText>
-                <AppText variant="body" color={on ? colors.text : colors.textFaint}>
-                  {on && amount > 0 ? formatMoney(share) : '—'}
-                </AppText>
-              </Pressable>
+              <View key={who} style={[styles.member, i < all.length - 1 && styles.divider]}>
+                <Pressable
+                  onPress={() => toggle(who)}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: on }}
+                  accessibilityLabel={`${label(who)}${on && amount > 0 ? `, ${formatMoney(share)}` : ''}`}
+                  style={styles.memberToggle}>
+                  <View style={[styles.check, on && styles.checkOn]}>{on ? <Icon name="check" size={14} color={colors.onAccent} /> : null}</View>
+                  <AppText variant="bodyStrong" numberOfLines={1} style={{ flex: 1 }} color={on ? colors.text : colors.textMuted}>
+                    {label(who)}
+                  </AppText>
+                </Pressable>
+                {on && split === 'exact' ? (
+                  <View style={styles.exactBox}>
+                    <TextInput
+                      value={exactText[who] ?? ''}
+                      onChangeText={(t) => setExactText((x) => ({ ...x, [who]: t }))}
+                      placeholder="0,00"
+                      placeholderTextColor={colors.textFaint}
+                      keyboardType="decimal-pad"
+                      selectTextOnFocus
+                      accessibilityLabel={`Import de ${label(who)}`}
+                      style={styles.exactInput}
+                    />
+                    <AppText variant="body" color={colors.textMuted}>
+                      €
+                    </AppText>
+                  </View>
+                ) : (
+                  <AppText variant="body" color={on ? colors.text : colors.textFaint}>
+                    {on && amount > 0 ? formatMoney(share) : '—'}
+                  </AppText>
+                )}
+              </View>
             );
           })}
         </View>
+        {split === 'exact' && amount > 0 && difference !== 0 ? (
+          <AppText variant="caption" color={colors.danger} accessibilityRole="alert">
+            {difference < 0
+              ? `Falten ${formatMoney(-difference)} per arribar a ${formatMoney(amount)}.`
+              : `Sobren ${formatMoney(difference)}: la suma passa de ${formatMoney(amount)}.`}
+          </AppText>
+        ) : null}
       </View>
 
       {problem && PROBLEMS[problem] ? (
@@ -214,7 +290,7 @@ export default function ExpenseSheet() {
             </AppText>
           ) : null}
           <AppText variant="small" color={colors.textMuted}>
-            {shares.size > 1 && amount % shares.size !== 0
+            {split === 'equal' && shares.size > 1 && amount % shares.size !== 0
               ? 'Els cèntims que no es poden repartir els assumeix qui ha pagat.'
               : 'Ho veuràs al saldo de cada persona.'}
           </AppText>
@@ -222,6 +298,9 @@ export default function ExpenseSheet() {
       ) : null}
 
       <Button label={existing ? 'Desa la despesa' : 'Afegeix la despesa'} onPress={save} disabled={!canSave} />
+      {canSave || existing ? (
+        <Button label="Comparteix amb el grup" icon="share" variant="secondary" onPress={onShare} />
+      ) : null}
       {existing ? <Button label="Esborra la despesa" variant="danger" icon="trash" onPress={onDelete} /> : null}
     </ScrollView>
   );
@@ -256,7 +335,8 @@ const styles = StyleSheet.create({
   },
   payerSelected: { borderColor: colors.accent, borderWidth: 2 },
   list: { backgroundColor: colors.surface, borderRadius: radius.lg, overflow: 'hidden' },
-  member: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingHorizontal: space.lg, minHeight: touchTarget + 8 },
+  member: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingRight: space.lg, minHeight: touchTarget + 8 },
+  memberToggle: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space.md, paddingLeft: space.lg, minHeight: touchTarget + 8 },
   divider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   check: {
     width: 24,
@@ -268,5 +348,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+  exactBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radius.sm,
+    paddingHorizontal: space.sm,
+  },
+  exactInput: {
+    width: 76,
+    textAlign: 'right',
+    color: colors.text,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 15,
+    paddingVertical: 8,
+    fontVariant: ['tabular-nums'],
+  },
   summary: { gap: space.xs, padding: space.lg, borderRadius: radius.lg, backgroundColor: colors.surface },
 });

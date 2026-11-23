@@ -6,10 +6,10 @@ import { AppText } from '@/components/AppText';
 import { Button } from '@/components/Button';
 import { Icon } from '@/components/Icon';
 import { EmptyState, Screen } from '@/components/Screen';
-import { myNetEffect } from '@/domain/groups';
+import { groupBalances, groupNet } from '@/domain/groups';
 import { formatMoney } from '@/domain/money';
 import type { Group } from '@/domain/types';
-import { useContacts, useExpenses, useGroups } from '@/store/store';
+import { useContacts, useExpenses, useGroups, useMovements } from '@/store/store';
 import { balanceColor, colors, radius, space, touchTarget } from '@/theme/tokens';
 
 function plural(n: number, one: string, many: string) {
@@ -51,6 +51,7 @@ export default function GroupsScreen() {
   const groups = useGroups();
   const expenses = useExpenses();
   const contacts = useContacts();
+  const movements = useMovements();
 
   const rows = useMemo(() => {
     const ids = new Set(contacts.map((c) => c.id));
@@ -58,11 +59,12 @@ export default function GroupsScreen() {
     return [...groups]
       .map((g) => {
         const own = expenses.filter((e) => e.groupId === g.id);
+        const payments = movements.filter((m) => m.kind === 'payment' && m.groupId === g.id);
         const last = own.reduce((max, e) => (e.date > max ? e.date : max), g.createdAt.slice(0, 10));
-        return { group: g, expenseCount: own.length, net: own.reduce((sum, e) => sum + myNetEffect(e, exists), 0), last };
+        return { group: g, expenseCount: own.length, net: groupNet(groupBalances(own, payments, exists)), last };
       })
       .sort((a, b) => b.last.localeCompare(a.last) || a.group.name.localeCompare(b.group.name, 'ca'));
-  }, [groups, expenses, contacts]);
+  }, [groups, expenses, contacts, movements]);
 
   const create = () => router.push('/editar-grup');
 
@@ -86,7 +88,7 @@ export default function GroupsScreen() {
             <GroupRow key={r.group.id} group={r.group} expenseCount={r.expenseCount} net={r.net} />
           ))}
           <AppText variant="small" color={colors.textFaint}>
-            L’import és el que les despeses de cada grup sumen als teus saldos. Els pagaments es fan des de cada persona.
+            L’import és el que queda pendent de cada grup, comptant les liquidacions.
           </AppText>
         </View>
       )}

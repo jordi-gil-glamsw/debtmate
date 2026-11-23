@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
@@ -6,8 +7,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '@/components/AppText';
 import { Button } from '@/components/Button';
 import { FieldGroup, TextField } from '@/components/Field';
+import { Icon } from '@/components/Icon';
 import { SheetHeader } from '@/components/SheetHeader';
 import { AppleButton } from '@/features/account/AppleButton';
+import { GoogleButton } from '@/features/account/GoogleButton';
 import { AuthCancelled, authErrorMessage, sendEmailCode, verifyEmailCode } from '@/features/account/auth';
 import { signInWithApple, signInWithGoogle } from '@/features/account/oauth';
 import { completeOnboarding, readState } from '@/store/store';
@@ -63,24 +66,45 @@ export default function AccountSheet() {
       automaticallyAdjustKeyboardInsets>
       <SheetHeader title="Compte" onCancel={() => router.back()} />
 
-      <View style={styles.intro}>
-        <AppText variant="largeTitle" accessibilityRole="header">
-          {step === 'code' ? 'Revisa el correu' : 'Guarda-ho al núvol'}
-        </AppText>
-        <AppText variant="body" color={colors.textMuted}>
-          {step === 'code'
-            ? `Hem enviat un codi a ${email.trim()}. Escriu-lo aquí per entrar.`
-            : 'Inicia sessió o crea un compte per tenir les dades a tots els teus dispositius. El que ja tens apuntat aquí s’hi afegirà.'}
-        </AppText>
-      </View>
-
       {step === 'choose' ? (
-        <View style={styles.actions}>
-          <AppleButton onPress={apple} disabled={busy} />
-          <Button label="Continua amb Google" variant="secondary" onPress={google} disabled={busy} />
-          <Button label="Entra amb el correu" variant="secondary" icon="mail" onPress={() => setStep('email')} disabled={busy} />
+        <>
+          <View style={styles.hero}>
+            <Image source={require('../../assets/images/logo.svg')} style={styles.logo} contentFit="contain" accessibilityElementsHidden />
+            <AppText variant="largeTitle" accessibilityRole="header" style={styles.center}>
+              Guarda-ho al núvol
+            </AppText>
+            <AppText variant="body" color={colors.textMuted} style={[styles.center, styles.lead]}>
+              Inicia sessió o crea un compte per tenir les dades a tots els teus dispositius. El que ja tens apuntat aquí s’hi afegirà.
+            </AppText>
+          </View>
+
+          <View style={styles.actions}>
+            <AppleButton onPress={apple} disabled={busy} />
+            <GoogleButton onPress={google} disabled={busy} />
+
+            <View style={styles.divider} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+              <View style={styles.rule} />
+              <AppText variant="small" color={colors.textFaint}>
+                o
+              </AppText>
+              <View style={styles.rule} />
+            </View>
+
+            <Button label="Entra amb el correu" variant="secondary" icon="mail" onPress={() => setStep('email')} disabled={busy} />
+          </View>
+        </>
+      ) : (
+        <View style={styles.intro}>
+          <AppText variant="largeTitle" accessibilityRole="header">
+            {step === 'code' ? 'Revisa el correu' : 'Entra amb el correu'}
+          </AppText>
+          <AppText variant="body" color={colors.textMuted}>
+            {step === 'code'
+              ? `Hem enviat un codi a ${email.trim()}. Escriu-lo aquí per entrar.`
+              : 'T’enviarem un codi d’un sol ús: no cal cap contrasenya.'}
+          </AppText>
         </View>
-      ) : null}
+      )}
 
       {step === 'email' ? (
         <View style={styles.actions}>
@@ -141,9 +165,12 @@ export default function AccountSheet() {
         </AppText>
       ) : null}
 
-      <AppText variant="small" color={colors.textMuted} style={styles.center}>
-        Només tu pots veure les teves dades. Pots eliminar el compte quan vulguis des d’Ajustos.
-      </AppText>
+      <View style={styles.note}>
+        <Icon name="lock" size={14} color={colors.textFaint} style={styles.noteIcon} />
+        <AppText variant="small" color={colors.textMuted} style={styles.noteText}>
+          Només tu pots veure les teves dades. Pots eliminar el compte quan vulguis des d’Ajustos.
+        </AppText>
+      </View>
     </ScrollView>
   );
 }
@@ -153,7 +180,15 @@ const styles = StyleSheet.create({
   // Centered column on wide (web) windows; full width on phones.
   content: { paddingHorizontal: space.xl, gap: space.xl, paddingTop: space.sm, width: '100%', maxWidth: sheetMaxWidth, alignSelf: 'center' },
   intro: { gap: space.sm },
-  actions: { gap: space.sm },
+  hero: { alignItems: 'center', gap: space.md, paddingTop: space.lg },
+  logo: { width: 84, height: 84, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, marginBottom: space.sm },
+  lead: { maxWidth: 420 },
+  actions: { gap: space.md },
+  divider: { flexDirection: 'row', alignItems: 'center', gap: space.md, marginVertical: space.xs },
+  rule: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
+  note: { flexDirection: 'row', alignItems: 'flex-start', gap: space.sm, paddingHorizontal: space.xs },
+  noteIcon: { marginTop: 1 },
+  noteText: { flex: 1 },
   center: { textAlign: 'center' },
   codeInput: {
     color: colors.text,

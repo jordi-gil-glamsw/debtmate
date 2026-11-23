@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '@/components/AppText';
 import { Icon, type IconName } from '@/components/Icon';
 import { useIsDesktop } from '@/hooks/useIsDesktop';
+import { safeBottom } from '@/lib/safeArea';
 import { useOnboarded } from '@/store/store';
 import { colors, fonts, radius, space } from '@/theme/tokens';
 
@@ -75,7 +76,7 @@ export default function WebTabsLayout() {
       </View>
 
       {!desktop ? (
-        <View style={[styles.bottomBar, { paddingBottom: insets.bottom }]} accessibilityRole="tablist">
+        <View style={[styles.bottomBar, { paddingBottom: safeBottom(insets.bottom) }]} accessibilityRole="tablist">
           {triggers(true)}
         </View>
       ) : null}

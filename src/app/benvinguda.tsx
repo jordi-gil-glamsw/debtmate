@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '@/components/AppText';
 import { Button } from '@/components/Button';
 import { cloudEnabled } from '@/features/account/session';
+import { safeBottom } from '@/lib/safeArea';
 import { completeOnboarding, loadSampleData } from '@/store/store';
 import { colors, space } from '@/theme/tokens';
 
@@ -12,7 +13,7 @@ export default function WelcomeScreen() {
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top + space.xl, paddingBottom: insets.bottom + space.xl }]}>
+    <View style={[styles.root, { paddingTop: insets.top + space.xl, paddingBottom: safeBottom(insets.bottom, space.xl) }]}>
       <AppText variant="title" style={styles.brand}>
         ovia
       </AppText>

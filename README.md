@@ -1,56 +1,77 @@
-# Welcome to your Expo app 👋
+# DebtMate
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+App per controlar els deutes amb amics i família: què et deuen, què deus i com es van liquidant.
+Una sola base de codi (Expo / React Native) per a **iOS i Android natius** i **web**.
 
-## Get started
+Disseny de referència: direcció visual «B · Fosc fintech»
+(llenç de dissenys: https://claude.ai/artifact/GV4sWCqkKhSDU5YAcRCSBz).
 
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Posar-la en marxa
 
 ```bash
-npm run reset-project
+npm install
+npx expo start        # i escaneja el QR amb l'app Expo Go (iOS / Android), o prem "w" per al web
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+Ordres útils:
 
-### Other setup steps
+| Ordre | Què fa |
+|---|---|
+| `npm test` | Proves unitàries del domini (càlcul de saldos, imports, dates) |
+| `npm run typecheck` | Comprovació de tipus TypeScript |
+| `npm run lint` | ESLint |
+| `npx expo-doctor` | Diagnòstic de dependències i configuració |
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+### iOS des de Windows
 
-## Learn more
+No cal un Mac:
 
-To learn more about developing your project with Expo, look at the following resources:
+- **Per provar**: instal·la *Expo Go* a l'iPhone i escaneja el QR de `npx expo start`.
+  Face ID no funciona dins d'Expo Go; per provar-lo cal una *development build*.
+- **Per compilar i publicar** (TestFlight / App Store): `npx eas-cli@latest build -p ios`
+  compila al núvol; `npx eas-cli@latest submit -p ios` la puja a App Store Connect.
+  Cal un compte d'Apple Developer (99 $/any). Per Android: `-p android` i un compte de Google Play (25 $, un sol cop).
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Estructura
 
-## Join the community
+```
+src/
+  app/                 Rutes (Expo Router). Cada fitxer és una pantalla.
+    (tabs)/            Pestanyes natives: Inici, Persones, Activitat, Ajustos
+    persona/[id].tsx   Detall d'una persona
+    nou.tsx            Full modal: nou deute
+    pagament/[id].tsx  Full modal: registrar pagament
+    benvinguda.tsx     Primera obertura
+  domain/              Lògica pura (sense React): tipus, diners, saldos, dates, exportació CSV
+  store/               Estat local persistent (SQLite a mòbil, localStorage al web)
+  components/          Components d'interfície
+  features/lock/       Bloqueig amb Face ID / empremta
+  theme/tokens.ts      Colors, tipografia i espaiats del disseny
+supabase/migrations/   Esquema de base de dades per a la futura sincronització
+```
 
-Join our community of developers creating universal apps.
+Principis:
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- **Diners en cèntims** (enters), mai decimals.
+- **El saldo no es desa**: es calcula a partir dels moviments, de manera que no es pot desquadrar.
+- **Natiu primer**: pestanyes natives (UITabBar / Material), fulls modals natius, icones SF Symbols a iOS
+  i Material Symbols a Android, diàlegs i full de compartir del sistema.
+
+## Estat actual
+
+Fet (MVP local, sense compte):
+
+- Apuntar deutes en els dos sentits, amb concepte i data límit opcional
+- Pagaments totals o parcials (Bizum, efectiu, transferència…)
+- Saldo per persona i global, progrés de devolució i activitat mensual
+- Cerca i filtres de persones; esborrar moviments i persones
+- Compartir el resum d'un deute (WhatsApp, Missatges…)
+- Bloqueig amb Face ID / empremta
+- Exportar a CSV; dades d'exemple
+
+Pendent:
+
+1. Comptes (Apple, Google, correu) i sincronització amb Supabase (esquema a `supabase/migrations`)
+2. Recordatoris amb notificacions abans de la data límit
+3. Disseny d'escriptori per al web (taula + panell de detall)
+4. Foto del tiquet, selector de data, edició de moviments

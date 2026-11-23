@@ -47,6 +47,8 @@ Per activar els comptes:
    `debtmate://**`, `exp://**` (per provar amb Expo Go) i l'adreça del web (p. ex. `http://localhost:8081`).
 6. **Google**: a Google Cloud, crea un client OAuth de tipus *Web application* amb l'URI de redirecció
    `https://<projecte>.supabase.co/auth/v1/callback`. Després posa'n l'ID i el secret a *Authentication → Providers → Google*.
+   Mentre la pantalla de consentiment de Google sigui en mode de proves, només hi entren els *Test users*;
+   abans de publicar l'app, prem *Audience → Publish app*.
 7. **Apple** (iOS):
    - Defineix `ios.bundleIdentifier` a `app.json`.
    - Al portal d'Apple Developer, activa *Sign in with Apple* per a aquest App ID.

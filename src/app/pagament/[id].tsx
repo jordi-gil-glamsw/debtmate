@@ -15,7 +15,7 @@ import { todayISO } from '@/domain/dates';
 import { centsToInput, formatMoney, parseAmount } from '@/domain/money';
 import { PAYMENT_METHOD_LABELS, type PaymentMethod } from '@/domain/types';
 import { addMovement, useContact, useMovements } from '@/store/store';
-import { colors, fonts, radius, space } from '@/theme/tokens';
+import { colors, fonts, radius, space, sheetMaxWidth } from '@/theme/tokens';
 
 type Preset = 'all' | 'half' | 'other';
 const METHODS = Object.keys(PAYMENT_METHOD_LABELS) as PaymentMethod[];
@@ -174,7 +174,8 @@ export default function PaymentSheet() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
-  content: { paddingHorizontal: space.xl, gap: space.xl, paddingTop: space.sm },
+  // Centered column on wide (web) windows; full width on phones.
+  content: { paddingHorizontal: space.xl, gap: space.xl, paddingTop: space.sm, width: '100%', maxWidth: sheetMaxWidth, alignSelf: 'center' },
   presets: { flexDirection: 'row', gap: space.sm },
   preset: {
     flex: 1,

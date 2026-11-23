@@ -11,7 +11,7 @@ import { AppleButton } from '@/features/account/AppleButton';
 import { AuthCancelled, authErrorMessage, sendEmailCode, verifyEmailCode } from '@/features/account/auth';
 import { signInWithApple, signInWithGoogle } from '@/features/account/oauth';
 import { completeOnboarding, readState } from '@/store/store';
-import { colors, fonts, radius, space } from '@/theme/tokens';
+import { colors, fonts, radius, space, sheetMaxWidth } from '@/theme/tokens';
 
 type Step = 'choose' | 'email' | 'code';
 
@@ -150,7 +150,8 @@ export default function AccountSheet() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
-  content: { paddingHorizontal: space.xl, gap: space.xl, paddingTop: space.sm },
+  // Centered column on wide (web) windows; full width on phones.
+  content: { paddingHorizontal: space.xl, gap: space.xl, paddingTop: space.sm, width: '100%', maxWidth: sheetMaxWidth, alignSelf: 'center' },
   intro: { gap: space.sm },
   actions: { gap: space.sm },
   center: { textAlign: 'center' },

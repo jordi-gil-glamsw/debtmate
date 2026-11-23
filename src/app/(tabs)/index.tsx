@@ -9,10 +9,17 @@ import { PersonRow } from '@/components/PersonRow';
 import { EmptyState, Screen, SectionHeader } from '@/components/Screen';
 import { sortNewestFirst } from '@/domain/balances';
 import { formatMoney } from '@/domain/money';
+import { DesktopHome } from '@/features/desktop/DesktopHome';
+import { useIsDesktop } from '@/hooks/useIsDesktop';
 import { useContactsWithBalance, useMovements, useTotals } from '@/store/store';
 import { colors, space } from '@/theme/tokens';
 
 export default function HomeScreen() {
+  const desktop = useIsDesktop();
+  return desktop ? <DesktopHome /> : <MobileHome />;
+}
+
+function MobileHome() {
   const totals = useTotals();
   const people = useContactsWithBalance();
   const movements = useMovements();

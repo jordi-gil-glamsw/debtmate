@@ -35,6 +35,9 @@ export const radius = { sm: 10, md: 14, lg: 16, xl: 20, xxl: 24, pill: 999 } as 
 /** Minimum touch target (Apple HIG 44pt, Material 48dp). */
 export const touchTarget = 44;
 
+/** Max width of form sheets, so they stay readable on desktop browsers. */
+export const sheetMaxWidth = 600;
+
 /** Colour for a contact balance (positive = owed to me). */
 export function balanceColor(cents: number): string {
   if (cents > 0) return colors.owedToMe;

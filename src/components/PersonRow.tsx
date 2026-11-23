@@ -1,4 +1,4 @@
-import { Link } from 'expo-router';
+import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { formatMoney } from '@/domain/money';
@@ -23,32 +23,32 @@ export function balanceLabel(balance: number): string {
 export function PersonRow({ id, name, balance, subtitle }: Props) {
   const amount = formatMoney(balance, { sign: 'always', currency: false });
   return (
-    <Link href={{ pathname: '/persona/[id]', params: { id } }} asChild>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`${name}, ${balanceLabel(balance)} ${formatMoney(balance, { sign: 'never' })}`}
-        style={({ pressed }) => [styles.row, pressed && { opacity: 0.75 }]}>
-        <Avatar name={name} />
-        <View style={styles.middle}>
-          <AppText variant="bodyStrong" numberOfLines={1}>
-            {name}
+    // Pressable + router.push rather than <Link asChild>: on web, Link's slot drops function styles.
+    <Pressable
+      onPress={() => router.push({ pathname: '/persona/[id]', params: { id } })}
+      accessibilityRole="button"
+      accessibilityLabel={`${name}, ${balanceLabel(balance)} ${formatMoney(balance, { sign: 'never' })}`}
+      style={({ pressed }) => [styles.row, pressed && { opacity: 0.75 }]}>
+      <Avatar name={name} />
+      <View style={styles.middle}>
+        <AppText variant="bodyStrong" numberOfLines={1}>
+          {name}
+        </AppText>
+        {subtitle ? (
+          <AppText variant="small" color={colors.textMuted} numberOfLines={1}>
+            {subtitle}
           </AppText>
-          {subtitle ? (
-            <AppText variant="small" color={colors.textMuted} numberOfLines={1}>
-              {subtitle}
-            </AppText>
-          ) : null}
-        </View>
-        <View style={styles.right}>
-          <AppText variant="amount" color={balanceColor(balance)}>
-            {amount}
-          </AppText>
-          <AppText variant="small" color={colors.textMuted}>
-            {balanceLabel(balance)}
-          </AppText>
-        </View>
-      </Pressable>
-    </Link>
+        ) : null}
+      </View>
+      <View style={styles.right}>
+        <AppText variant="amount" color={balanceColor(balance)}>
+          {amount}
+        </AppText>
+        <AppText variant="small" color={colors.textMuted}>
+          {balanceLabel(balance)}
+        </AppText>
+      </View>
+    </Pressable>
   );
 }
 

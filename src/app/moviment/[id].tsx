@@ -16,7 +16,7 @@ import { centsToInput, parseAmount } from '@/domain/money';
 import { PAYMENT_METHOD_LABELS, type Contact, type Movement, type PaymentMethod } from '@/domain/types';
 import { confirm } from '@/lib/dialogs';
 import { deleteMovement, updateMovement, useContact, useMovements } from '@/store/store';
-import { colors, fonts, space } from '@/theme/tokens';
+import { colors, fonts, space, sheetMaxWidth } from '@/theme/tokens';
 
 const METHODS = Object.keys(PAYMENT_METHOD_LABELS) as PaymentMethod[];
 
@@ -171,13 +171,15 @@ function EditForm({ movement, contact }: { movement: Movement; contact: Contact 
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
-  content: { paddingHorizontal: space.xl, gap: space.xl, paddingTop: space.sm },
+  // Centered column on wide (web) windows; full width on phones.
+  content: { paddingHorizontal: space.xl, gap: space.xl, paddingTop: space.sm, width: '100%', maxWidth: sheetMaxWidth, alignSelf: 'center' },
   center: { textAlign: 'center' },
   amountRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', gap: space.sm },
   amountInput: {
     fontFamily: fonts.display,
     fontSize: 52,
     minWidth: 120,
+    maxWidth: 280, // web inputs have a wide intrinsic width; enough for 12.345,67
     textAlign: 'center',
     paddingVertical: 0,
     fontVariant: ['tabular-nums'],

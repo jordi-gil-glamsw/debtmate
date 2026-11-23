@@ -17,7 +17,7 @@ import { parseAmount } from '@/domain/money';
 import { requestReminderPermission } from '@/features/reminders/notifications';
 import { refreshReminders } from '@/features/reminders/ReminderManager';
 import { addContact, addMovement, readState, useContactsWithBalance } from '@/store/store';
-import { colors, fonts, radius, space } from '@/theme/tokens';
+import { colors, fonts, radius, space, sheetMaxWidth } from '@/theme/tokens';
 
 type Direction = 'owed' | 'owe';
 
@@ -169,13 +169,15 @@ export default function NewMovementSheet() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
-  content: { paddingHorizontal: space.xl, gap: space.xl, paddingTop: space.sm },
+  // Centered column on wide (web) windows; full width on phones.
+  content: { paddingHorizontal: space.xl, gap: space.xl, paddingTop: space.sm, width: '100%', maxWidth: sheetMaxWidth, alignSelf: 'center' },
   amountBox: { alignItems: 'center', gap: space.xs },
   amountRow: { flexDirection: 'row', alignItems: 'baseline', gap: space.sm },
   amountInput: {
     fontFamily: fonts.display,
     fontSize: 52,
     minWidth: 120,
+    maxWidth: 280, // web inputs have a wide intrinsic width; enough for 12.345,67
     textAlign: 'center',
     paddingVertical: 0,
     fontVariant: ['tabular-nums'],

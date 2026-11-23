@@ -137,6 +137,12 @@ describe('applyRemote', () => {
 });
 
 describe('receipt photos', () => {
+  it('leaves the photo column out while photos are disabled', async () => {
+    const { movementToRow } = await import('./merge.ts');
+    assert.equal('receipt' in movementToRow(debt, { withReceipt: false }), false);
+    assert.equal(movementToRow(debt).receipt, null);
+  });
+
   it('round-trips the receipt file name', async () => {
     const { movementToRow, rowToMovement } = await import('./merge.ts');
     const m = { ...debt, receipt: 'abc.jpg' };

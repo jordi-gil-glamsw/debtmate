@@ -4,6 +4,7 @@ import { ActivityIndicator, Alert, Linking, Platform, Pressable, StyleSheet, Vie
 
 import { AppText } from '@/components/AppText';
 import { Button } from '@/components/Button';
+import { features } from '@/config/features';
 import { useSession } from '@/features/account/session';
 import { confirm, notify } from '@/lib/dialogs';
 import { colors, radius, space } from '@/theme/tokens';
@@ -39,6 +40,9 @@ export function ReceiptField({ value, onChange }: Props) {
   const session = useSession();
   const [busy, setBusy] = useState(false);
   const blocked = receiptsNeedAccount && !session;
+
+  // Hidden until the paid tier: see src/config/features.ts.
+  if (!features.receiptPhotos) return null;
 
   const pick = async () => {
     const source = await chooseSource();

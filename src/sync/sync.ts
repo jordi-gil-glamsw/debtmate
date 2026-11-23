@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 
 import { supabase } from '@/lib/supabase';
+import { features } from '@/config/features';
 import { cleanupLocalReceipts } from '@/features/receipts/receipts';
 import { readLocalData, updateLocalData } from '@/store/store';
 
@@ -99,7 +100,8 @@ async function syncOnce(): Promise<void> {
     const { error } = await supabase.from('contacts').upsert(part);
     if (error) throw error;
   }
-  for (const part of chunks(batch.movements.map(movementToRow))) {
+  const withReceipt = features.receiptPhotos;
+  for (const part of chunks(batch.movements.map((m) => movementToRow(m, { withReceipt })))) {
     const { error } = await supabase.from('movements').upsert(part);
     if (error) throw error;
   }

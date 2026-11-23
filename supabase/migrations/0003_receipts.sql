@@ -1,4 +1,5 @@
--- DebtMate · receipt photos.
+-- DebtMate · receipt photos. OPTIONAL: only needed when receipt photos are enabled
+-- (EXPO_PUBLIC_RECEIPT_PHOTOS=1, see src/config/features.ts). Uses Supabase Storage.
 -- The movement keeps the photo's file name; the image lives in the private Storage bucket
 -- "receipts" under a folder named after the owner's user id: receipts/<user id>/<file name>.
 

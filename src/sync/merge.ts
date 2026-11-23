@@ -66,13 +66,17 @@ export type MovementRow = {
 };
 
 export type ContactUpsert = Pick<ContactRow, 'id' | 'name' | 'created_at'>;
-export type MovementUpsert = Omit<MovementRow, 'updated_at' | 'deleted_at'>;
+export type MovementUpsert = Omit<MovementRow, 'updated_at' | 'deleted_at' | 'receipt'> & { receipt?: string | null };
 
 export function contactToRow(c: Contact): ContactUpsert {
   return { id: c.id, name: c.name, created_at: c.createdAt };
 }
 
-export function movementToRow(m: Movement): MovementUpsert {
+/**
+ * withReceipt: send the photo column. Off while receipt photos are disabled, so the sync also
+ * works on a database without migration 0003.
+ */
+export function movementToRow(m: Movement, { withReceipt = true }: { withReceipt?: boolean } = {}): MovementUpsert {
   return {
     id: m.id,
     contact_id: m.contactId,
@@ -84,7 +88,7 @@ export function movementToRow(m: Movement): MovementUpsert {
     due_date: m.kind === 'debt' ? (m.dueDate ?? null) : null,
     method: m.kind === 'payment' ? m.method : null,
     note: m.note ?? null,
-    receipt: m.receipt ?? null,
+    ...(withReceipt ? { receipt: m.receipt ?? null } : {}),
     created_at: m.createdAt,
   };
 }

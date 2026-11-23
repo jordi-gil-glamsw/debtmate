@@ -51,6 +51,8 @@ Deno.serve(async (req) => {
   const folder = data.user.id;
   for (;;) {
     const { data: files, error: listError } = await admin.storage.from('receipts').list(folder, { limit: 1000 });
+    // No bucket yet (receipt photos never enabled): nothing to remove.
+    if (listError && /not found/i.test(listError.message)) break;
     if (listError) return json({ error: listError.message }, 500);
     if (!files || files.length === 0) break;
     const { error: removeError } = await admin.storage.from('receipts').remove(files.map((f) => `${folder}/${f.name}`));

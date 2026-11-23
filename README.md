@@ -51,7 +51,9 @@ Per activar els comptes:
    - Defineix `ios.bundleIdentifier` a `app.json`.
    - Al portal d'Apple Developer, activa *Sign in with Apple* per a aquest App ID.
    - Afegeix el bundle ID a *Providers → Apple → Client IDs*, i també `host.exp.Exponent` per provar-ho amb Expo Go.
-8. **Eliminar el compte** (l'App Store ho exigeix): `npx supabase functions deploy delete-account`.
+8. **Eliminar el compte** (l'App Store ho exigeix): desplega `supabase/functions/delete-account`.
+   Des del panell: *Edge Functions → Deploy a new function → Via Editor*, amb el nom `delete-account`.
+   Amb la CLI: `npx supabase functions deploy delete-account`. Deixa activada la verificació de JWT.
 
 Com funciona la sincronització (`src/sync/`):
 

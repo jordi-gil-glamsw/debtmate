@@ -108,8 +108,10 @@ Fet:
 - Exportar a CSV; dades d'exemple
 - Comptes opcionals (Apple, Google, correu amb codi), sincronització entre dispositius i eliminació del compte
 
+- Recordatoris: notificació local a les 10:00 del dia límit si encara hi ha deute pendent
+  (iOS i Android; es recalculen amb cada canvi, també els sincronitzats)
+
 Pendent:
 
-1. Recordatoris amb notificacions abans de la data límit
-2. Disseny d'escriptori per al web (taula + panell de detall)
-3. Foto del tiquet, selector de data, edició de moviments
+1. Disseny d'escriptori per al web (taula + panell de detall)
+2. Foto del tiquet, selector de data, edició de moviments

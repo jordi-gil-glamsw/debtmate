@@ -13,7 +13,9 @@ import { SegmentedControl } from '@/components/SegmentedControl';
 import { SheetHeader } from '@/components/SheetHeader';
 import { addDays, formatShortDate, todayISO } from '@/domain/dates';
 import { parseAmount } from '@/domain/money';
-import { addContact, addMovement, useContactsWithBalance } from '@/store/store';
+import { requestReminderPermission } from '@/features/reminders/notifications';
+import { refreshReminders } from '@/features/reminders/ReminderManager';
+import { addContact, addMovement, readState, useContactsWithBalance } from '@/store/store';
 import { colors, fonts, radius, space } from '@/theme/tokens';
 
 type Direction = 'owed' | 'owe';
@@ -58,6 +60,12 @@ export default function NewMovementSheet() {
       dueDate: dueDays ? addDays(today, dueDays) : undefined,
     });
     router.back();
+    // Ask for notifications at the moment they make sense: the first debt with a due date.
+    if (dueDays && readState().settings.reminders) {
+      requestReminderPermission()
+        .then(() => refreshReminders())
+        .catch(() => {});
+    }
   };
 
   const amountColor = direction === 'owed' ? colors.owedToMe : colors.iOwe;

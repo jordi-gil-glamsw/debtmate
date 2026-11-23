@@ -15,6 +15,8 @@ import { buildSampleData } from './sample';
 
 export type Settings = {
   biometricLock: boolean;
+  /** Notify on due dates (also needs the system permission). */
+  reminders: boolean;
 };
 
 export type AppState = {
@@ -33,7 +35,7 @@ const initialState: AppState = {
   onboarded: false,
   contacts: [],
   movements: [],
-  settings: { biometricLock: false },
+  settings: { biometricLock: false, reminders: true },
   sync: emptySyncMeta,
 };
 

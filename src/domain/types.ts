@@ -29,6 +29,11 @@ type MovementBase = {
   /** Receipt photo file name (e.g. '<uuid>.jpg'); stored on the device and in the account. */
   receipt?: string;
   createdAt: string; // ISO timestamp
+  /**
+   * Set on debts derived from a group expense (see domain/groups.ts). Those are computed,
+   * never stored: edit or delete the expense instead.
+   */
+  expenseId?: Id;
 };
 
 /** A new debt. `owed` = the contact owes me; `owe` = I owe the contact. */
@@ -46,6 +51,35 @@ export type PaymentMovement = MovementBase & {
 };
 
 export type Movement = DebtMovement | PaymentMovement;
+
+/** A saved set of people who often share expenses (a group of friends, a trip). I'm always in it. */
+export type Group = {
+  id: Id;
+  name: string;
+  memberIds: Id[]; // contacts
+  createdAt: string;
+};
+
+/**
+ * A shared expense in a group, split in equal parts among the people who took part.
+ * Only the debts involving me are tracked: if I paid, each participant owes me their part;
+ * if someone else paid and I took part, I owe them my part.
+ */
+export type GroupExpense = {
+  id: Id;
+  groupId: Id;
+  concept: string;
+  amountCents: number; // total, > 0
+  date: string; // ISO date
+  /** Contact who paid; null = I paid. */
+  paidBy: Id | null;
+  /** Contacts who took part (excluding me). */
+  participantIds: Id[];
+  /** Whether I took part (had my share). */
+  includesMe: boolean;
+  note?: string;
+  createdAt: string;
+};
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   bizum: 'Bizum',

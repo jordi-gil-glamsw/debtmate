@@ -1,9 +1,19 @@
 import { useMemo, useSyncExternalStore } from 'react';
 
 import { balancesByContact, totals } from '@/domain/balances';
-import type { Contact, DebtMovement, Id, Movement, PaymentMovement } from '@/domain/types';
+import { expenseMovements } from '@/domain/groups';
+import type { Contact, DebtMovement, Group, GroupExpense, Id, Movement, PaymentMovement } from '@/domain/types';
 import { cleanupLocalReceipts, deleteLocalReceipt } from '@/features/receipts/receipts';
-import { emptySyncMeta, markChanged, markDeleted, queueReceipts, type LocalData, type SyncMeta } from '@/sync/merge';
+import {
+  emptyRecords,
+  emptySyncMeta,
+  markChanged,
+  markDeleted,
+  normalizeSyncMeta,
+  queueReceipts,
+  type LocalData,
+  type SyncMeta,
+} from '@/sync/merge';
 
 import { loadRaw, saveRaw } from './persist';
 import { buildSampleData } from './sample';
@@ -24,7 +34,10 @@ export type AppState = {
   version: 1;
   onboarded: boolean;
   contacts: Contact[];
+  /** Stored movements only; debts from group expenses are derived (see useMovements). */
   movements: Movement[];
+  groups: Group[];
+  expenses: GroupExpense[];
   settings: Settings;
   sync: SyncMeta;
 };
@@ -34,8 +47,7 @@ const STORAGE_KEY = 'debtmate:state:v1';
 const initialState: AppState = {
   version: 1,
   onboarded: false,
-  contacts: [],
-  movements: [],
+  ...emptyRecords,
   settings: { biometricLock: false, reminders: true },
   sync: emptySyncMeta,
 };
@@ -52,7 +64,7 @@ function load(): AppState {
       ...initialState,
       ...parsed,
       settings: { ...initialState.settings, ...parsed.settings },
-      sync: { ...emptySyncMeta, ...parsed.sync },
+      sync: normalizeSyncMeta(parsed.sync),
     };
   } catch {
     return initialState;
@@ -94,8 +106,27 @@ export function newId(): Id {
 
 // ─── Read hooks ────────────────────────────────────────────────────────────────
 
+/**
+ * Stored movements plus the debts derived from group expenses, as one list.
+ * Cached on its inputs so selectors get a stable reference.
+ */
+let derived: { contacts: Contact[]; movements: Movement[]; expenses: GroupExpense[]; all: Movement[] } | null = null;
+function allMovements(s: AppState): Movement[] {
+  if (derived && derived.contacts === s.contacts && derived.movements === s.movements && derived.expenses === s.expenses) {
+    return derived.all;
+  }
+  const ids = new Set(s.contacts.map((c) => c.id));
+  const fromExpenses = s.expenses.flatMap((e) => expenseMovements(e, (id) => ids.has(id)));
+  const all = fromExpenses.length === 0 ? s.movements : [...s.movements, ...fromExpenses];
+  derived = { contacts: s.contacts, movements: s.movements, expenses: s.expenses, all };
+  return all;
+}
+
 export const useContacts = () => useSelect((s) => s.contacts);
-export const useMovements = () => useSelect((s) => s.movements);
+/** Every movement, including the debts derived from group expenses (they carry expenseId). */
+export const useMovements = () => useSelect(allMovements);
+export const useGroups = () => useSelect((s) => s.groups);
+export const useExpenses = () => useSelect((s) => s.expenses);
 export const useSettings = () => useSelect((s) => s.settings);
 export const useOnboarded = () => useSelect((s) => s.onboarded);
 export const useSyncMeta = () => useSelect((s) => s.sync);
@@ -103,6 +134,16 @@ export const useSyncMeta = () => useSelect((s) => s.sync);
 export function useContact(id: Id | undefined): Contact | undefined {
   const contacts = useContacts();
   return useMemo(() => contacts.find((c) => c.id === id), [contacts, id]);
+}
+
+export function useGroup(id: Id | undefined): Group | undefined {
+  const groups = useGroups();
+  return useMemo(() => groups.find((g) => g.id === id), [groups, id]);
+}
+
+export function useExpense(id: Id | undefined): GroupExpense | undefined {
+  const expenses = useExpenses();
+  return useMemo(() => expenses.find((e) => e.id === id), [expenses, id]);
 }
 
 export function useBalances(): Map<Id, number> {
@@ -176,11 +217,15 @@ export function deleteContact(id: Id): void {
   setState((s) => {
     const removed = s.movements.filter((m) => m.contactId === id);
     const sync = markDeleted(markDeleted(s.sync, 'movements', removed.map((m) => m.id)), 'contacts', [id]);
+    // Their parts of group expenses stop counting (derived debts skip missing people);
+    // the other people's parts stay as they were.
+    const groupsWithThem = s.groups.filter((g) => g.memberIds.includes(id)).map((g) => g.id);
     return {
       ...s,
       contacts: s.contacts.filter((c) => c.id !== id),
       movements: s.movements.filter((m) => m.contactId !== id),
-      sync: queueReceipts(sync, [], receiptsOf(removed)),
+      groups: s.groups.map((g) => (g.memberIds.includes(id) ? { ...g, memberIds: g.memberIds.filter((m) => m !== id) } : g)),
+      sync: markChanged(queueReceipts(sync, [], receiptsOf(removed)), 'groups', groupsWithThem),
     };
   });
   forgetLocalReceipts(photos);
@@ -216,6 +261,8 @@ export function updateMovement(movement: Movement): void {
 }
 
 export function deleteMovement(id: Id): void {
+  // Debts derived from a group expense aren't stored: delete the expense instead.
+  if (!getState().movements.some((m) => m.id === id)) return;
   const photos = receiptsOf(getState().movements.filter((m) => m.id === id));
   setState((s) => ({
     ...s,
@@ -223,6 +270,59 @@ export function deleteMovement(id: Id): void {
     sync: queueReceipts(markDeleted(s.sync, 'movements', [id]), [], photos),
   }));
   forgetLocalReceipts(photos);
+}
+
+// ─── Groups ────────────────────────────────────────────────────────────────────
+
+export function addGroup(name: string, memberIds: Id[]): Group {
+  const group: Group = { id: newId(), name: name.trim(), memberIds, createdAt: new Date().toISOString() };
+  setState((s) => ({ ...s, groups: [...s.groups, group], sync: markChanged(s.sync, 'groups', [group.id]) }));
+  return group;
+}
+
+export function updateGroup(id: Id, patch: Pick<Group, 'name' | 'memberIds'>): void {
+  setState((s) => ({
+    ...s,
+    groups: s.groups.map((g) => (g.id === id ? { ...g, name: patch.name.trim(), memberIds: patch.memberIds } : g)),
+    sync: markChanged(s.sync, 'groups', [id]),
+  }));
+}
+
+/** Deletes the group and its expenses (and so the debts they created). */
+export function deleteGroup(id: Id): void {
+  setState((s) => {
+    const expenseIds = s.expenses.filter((e) => e.groupId === id).map((e) => e.id);
+    return {
+      ...s,
+      groups: s.groups.filter((g) => g.id !== id),
+      expenses: s.expenses.filter((e) => e.groupId !== id),
+      sync: markDeleted(markDeleted(s.sync, 'expenses', expenseIds), 'groups', [id]),
+    };
+  });
+}
+
+export type NewExpense = Omit<GroupExpense, 'id' | 'createdAt'>;
+
+export function addExpense(input: NewExpense): GroupExpense {
+  const expense: GroupExpense = { ...input, id: newId(), createdAt: new Date().toISOString() };
+  setState((s) => ({ ...s, expenses: [...s.expenses, expense], sync: markChanged(s.sync, 'expenses', [expense.id]) }));
+  return expense;
+}
+
+export function updateExpense(expense: GroupExpense): void {
+  setState((s) => ({
+    ...s,
+    expenses: s.expenses.map((e) => (e.id === expense.id ? expense : e)),
+    sync: markChanged(s.sync, 'expenses', [expense.id]),
+  }));
+}
+
+export function deleteExpense(id: Id): void {
+  setState((s) => ({
+    ...s,
+    expenses: s.expenses.filter((e) => e.id !== id),
+    sync: markDeleted(s.sync, 'expenses', [id]),
+  }));
 }
 
 export function updateSettings(patch: Partial<Settings>): void {
@@ -235,17 +335,11 @@ export function completeOnboarding(): void {
 
 /** Marks every current record as deleted, so the deletion also reaches the account. */
 function tombstoneAll(s: AppState): SyncMeta {
-  const withPhotos = queueReceipts(s.sync, [], receiptsOf(s.movements));
-  const withMovements = markDeleted(
-    withPhotos,
-    'movements',
-    s.movements.map((m) => m.id),
-  );
-  return markDeleted(
-    withMovements,
-    'contacts',
-    s.contacts.map((c) => c.id),
-  );
+  let sync = queueReceipts(s.sync, [], receiptsOf(s.movements));
+  sync = markDeleted(sync, 'expenses', s.expenses.map((e) => e.id));
+  sync = markDeleted(sync, 'movements', s.movements.map((m) => m.id));
+  sync = markDeleted(sync, 'groups', s.groups.map((g) => g.id));
+  return markDeleted(sync, 'contacts', s.contacts.map((c) => c.id));
 }
 
 export function loadSampleData(): void {
@@ -253,28 +347,18 @@ export function loadSampleData(): void {
   const sample = buildSampleData(newId);
   setState((s) => {
     const cleared = tombstoneAll(s);
-    const withContacts = markChanged(
-      cleared,
-      'contacts',
-      sample.contacts.map((c) => c.id),
-    );
-    return {
-      ...s,
-      contacts: sample.contacts,
-      movements: sample.movements,
-      sync: markChanged(
-        withContacts,
-        'movements',
-        sample.movements.map((m) => m.id),
-      ),
-    };
+    let sync = markChanged(cleared, 'contacts', sample.contacts.map((c) => c.id));
+    sync = markChanged(sync, 'groups', sample.groups.map((g) => g.id));
+    sync = markChanged(sync, 'movements', sample.movements.map((m) => m.id));
+    sync = markChanged(sync, 'expenses', sample.expenses.map((e) => e.id));
+    return { ...s, ...sample, sync };
   });
   forgetLocalReceipts(photos);
 }
 
 export function eraseAllData(): void {
   const photos = receiptsOf(getState().movements);
-  setState((s) => ({ ...s, contacts: [], movements: [], sync: tombstoneAll(s) }));
+  setState((s) => ({ ...s, ...emptyRecords, sync: tombstoneAll(s) }));
   forgetLocalReceipts(photos);
 }
 
@@ -283,25 +367,31 @@ export function readState(): AppState {
   return getState();
 }
 
+/** Like useMovements, for non-React code: stored movements plus debts from group expenses. */
+export function readAllMovements(): Movement[] {
+  return allMovements(getState());
+}
+
 // ─── Sync plumbing (used by src/sync only) ────────────────────────────────────
 
 export function readLocalData(): LocalData {
-  const { contacts, movements, sync } = getState();
-  return { contacts, movements, sync };
+  const { contacts, groups, movements, expenses, sync } = getState();
+  return { contacts, groups, movements, expenses, sync };
 }
 
 /** Applies a sync step to the latest state (the user may have edited meanwhile). */
 export function updateLocalData(update: (d: LocalData) => LocalData): void {
   setState((s) => {
-    const next = update({ contacts: s.contacts, movements: s.movements, sync: s.sync });
-    if (next.contacts === s.contacts && next.movements === s.movements && next.sync === s.sync) return s;
-    return { ...s, contacts: next.contacts, movements: next.movements, sync: next.sync };
+    const { contacts, groups, movements, expenses, sync } = s;
+    const next = update({ contacts, groups, movements, expenses, sync });
+    const changed = (Object.keys(next) as (keyof LocalData)[]).some((k) => next[k] !== s[k]);
+    return changed ? { ...s, ...next } : s;
   });
 }
 
 /** After signing out: removes the account's data from this device (it stays in the cloud). */
 export function clearAccountData(): void {
-  setState((s) => ({ ...s, contacts: [], movements: [], sync: emptySyncMeta }));
+  setState((s) => ({ ...s, ...emptyRecords, sync: emptySyncMeta }));
   try {
     cleanupLocalReceipts(new Set());
   } catch {

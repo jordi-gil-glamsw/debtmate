@@ -26,6 +26,10 @@ export default function TabsLayout() {
         <NativeTabs.Trigger.Label>Persones</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'person.2', selected: 'person.2.fill' }} md="group" />
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="grups">
+        <NativeTabs.Trigger.Label>Grups</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'person.3', selected: 'person.3.fill' }} md="groups" />
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="activitat">
         <NativeTabs.Trigger.Label>Activitat</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="chart.bar.fill" md="bar_chart" />

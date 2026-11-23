@@ -7,7 +7,7 @@ import { Avatar } from '@/components/Avatar';
 import { ProgressBar } from '@/components/BalanceBar';
 import { Button } from '@/components/Button';
 import { Icon } from '@/components/Icon';
-import { MovementRow } from '@/components/MovementRow';
+import { MovementRow, openMovement } from '@/components/MovementRow';
 import { EmptyState, Screen, SectionHeader } from '@/components/Screen';
 import { balanceOf, settlementProgress, sortNewestFirst } from '@/domain/balances';
 import { formatShortDate, todayISO } from '@/domain/dates';
@@ -65,7 +65,7 @@ export default function PersonScreen() {
   };
 
   const onDeleteContact = async () => {
-    if (await confirm(`Esborrar ${contact.name}`, 'S’esborraran també tots els seus moviments.', 'Esborra', true)) {
+    if (await confirm(`Esborrar ${contact.name}`, 'S’esborraran també tots els seus moviments i deixarà de comptar a les despeses de grup.', 'Esborra', true)) {
       router.back();
       deleteContact(contact.id);
     }
@@ -162,8 +162,9 @@ export default function PersonScreen() {
             <MovementRow
               key={m.id}
               movement={m}
-              onPress={() => router.push({ pathname: '/moviment/[id]', params: { id: m.id } })}
-              onLongPress={() => onDeleteMovement(m)}
+              onPress={() => openMovement(m)}
+              // Debts from a group expense are deleted from the expense itself.
+              onLongPress={m.expenseId ? undefined : () => onDeleteMovement(m)}
             />
           ))}
           <AppText variant="small" color={colors.textFaint} style={{ marginTop: space.sm }}>

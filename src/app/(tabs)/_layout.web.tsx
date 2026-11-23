@@ -15,9 +15,10 @@ import { colors, fonts, radius, space } from '@/theme/tokens';
  * a sidebar on desktop, a bottom bar on narrow (phone) browsers.
  */
 
-const TABS: { name: string; href: '/' | '/persones' | '/activitat' | '/ajustos'; label: string; icon: IconName }[] = [
+const TABS: { name: string; href: '/' | '/persones' | '/grups' | '/activitat' | '/ajustos'; label: string; icon: IconName }[] = [
   { name: 'index', href: '/', label: 'Inici', icon: 'home' },
   { name: 'persones', href: '/persones', label: 'Persones', icon: 'people' },
+  { name: 'grups', href: '/grups', label: 'Grups', icon: 'group' },
   { name: 'activitat', href: '/activitat', label: 'Activitat', icon: 'chart' },
   { name: 'ajustos', href: '/ajustos', label: 'Ajustos', icon: 'settings' },
 ];

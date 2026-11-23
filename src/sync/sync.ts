@@ -11,17 +11,20 @@ import {
   clearPushed,
   collectPush,
   contactToRow,
+  expenseToRow,
+  groupToRow,
   movementToRow,
-  type ContactRow,
+  TABLES,
   type LocalData,
-  type MovementRow,
+  type RemoteRows,
   type Table,
 } from './merge';
 import { removeReceipts, uploadReceipts } from './receiptStorage';
 
 /**
  * Network side of the sync (see merge.ts for the rules).
- * Order matters: contacts are pushed before the movements that reference them.
+ * Order matters: rows are pushed after the rows they reference (see TABLES), and deleted
+ * in the reverse order.
  */
 
 const PAGE = 1000;
@@ -56,16 +59,24 @@ function chunks<T>(items: T[]): T[][] {
   return out;
 }
 
-async function pull<R>(table: Table, cursor: string | null): Promise<R[]> {
+async function upsert(table: Table, rows: object[]) {
+  if (!supabase) return;
+  for (const part of chunks(rows)) {
+    const { error } = await supabase.from(table).upsert(part);
+    if (error) throw error;
+  }
+}
+
+async function pull(table: Table, cursor: string | null): Promise<unknown[]> {
   if (!supabase) return [];
   const since = cursor ? new Date(Date.parse(cursor) - OVERLAP_MS).toISOString() : null;
-  const rows: R[] = [];
+  const rows: unknown[] = [];
   for (let from = 0; ; from += PAGE) {
     let query = supabase.from(table).select('*').order('updated_at').order('id').range(from, from + PAGE - 1);
     if (since) query = query.gt('updated_at', since);
     const { data, error } = await query;
     if (error) throw error;
-    rows.push(...(data as R[]));
+    rows.push(...data);
     if (data.length < PAGE) return rows;
   }
 }
@@ -96,28 +107,21 @@ async function syncOnce(): Promise<void> {
   const batch = collectPush(readLocalData());
   // Photos first, so other devices never see a movement whose photo isn't there yet.
   await uploadReceipts(userId, batch.receipts.upload);
-  for (const part of chunks(batch.contacts.map(contactToRow))) {
-    const { error } = await supabase.from('contacts').upsert(part);
-    if (error) throw error;
-  }
   const withReceipt = features.receiptPhotos;
-  for (const part of chunks(batch.movements.map((m) => movementToRow(m, { withReceipt })))) {
-    const { error } = await supabase.from('movements').upsert(part);
-    if (error) throw error;
-  }
-  await softDelete('movements', batch.deleted.movements);
-  await softDelete('contacts', batch.deleted.contacts);
+  await upsert('contacts', batch.contacts.map(contactToRow));
+  await upsert('groups', batch.groups.map(groupToRow));
+  await upsert('movements', batch.movements.map((m) => movementToRow(m, { withReceipt })));
+  await upsert('expenses', batch.expenses.map(expenseToRow));
+  for (const table of [...TABLES].reverse()) await softDelete(table, batch.deleted[table]);
   await removeReceipts(userId, batch.receipts.remove);
   forThisUser((d) => clearPushed(d, batch));
 
   // 2. Pull
   const { cursor } = readLocalData().sync;
-  const [contacts, movements] = await Promise.all([
-    pull<ContactRow>('contacts', cursor.contacts),
-    pull<MovementRow>('movements', cursor.movements),
-  ]);
+  const pulled = await Promise.all(TABLES.map((t) => pull(t, cursor[t])));
+  const rows = Object.fromEntries(TABLES.map((t, i) => [t, pulled[i]])) as unknown as RemoteRows;
   forThisUser((d) => {
-    const merged = applyRemote(d, contacts, movements);
+    const merged = applyRemote(d, rows);
     return { ...merged, sync: { ...merged.sync, lastSyncedAt: new Date().toISOString() } };
   });
   cleanupReceipts();

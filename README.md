@@ -38,7 +38,8 @@ Sense configurar res, l'app funciona sense compte (les dades només es guarden a
 Per activar els comptes:
 
 1. Crea un projecte a [supabase.com](https://supabase.com) (el pla gratuït n'hi ha prou).
-2. **SQL Editor**: enganxa i executa, per ordre, `0001_init.sql` i `0002_grants.sql` de `supabase/migrations/`.
+2. **SQL Editor**: enganxa i executa, per ordre, `0001_init.sql`, `0002_grants.sql` i `0004_groups.sql` de
+   `supabase/migrations/`.
    (`0003_receipts.sql` només cal si actives les fotos del tiquet; vegeu més avall.)
 3. Copia `.env.example` a `.env.local` i omple'l amb la URL i la *publishable key*
    (*Project Settings → API Keys*). Reinicia `npx expo start`.
@@ -118,6 +119,10 @@ Fet:
 - Selector de data natiu (data del moviment i data límit) i edició de moviments (tocar un moviment)
 - Recordatoris: notificació local a les 10:00 del dia límit si encara hi ha deute pendent
   (iOS i Android; es recalculen amb cada canvi, també els sincronitzats)
+- Grups i despeses compartides (estil Splitwise, però només amb els teus deutes): grups desats,
+  qui ha pagat, qui hi era i repartiment a parts iguals (els cèntims sobrants, per a qui paga).
+  Els deutes de cada persona es calculen a partir de les despeses (`src/domain/groups.ts`), no es
+  desen a part; els pagaments es fan des de cada persona com sempre
 
 Pendent:
 

@@ -1,10 +1,9 @@
-import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/AppText';
 import { Icon } from '@/components/Icon';
-import { describeMovement, MovementRow } from '@/components/MovementRow';
+import { describeMovement, MovementRow, openMovement } from '@/components/MovementRow';
 import { EmptyState, Screen } from '@/components/Screen';
 import { monthSummary, sortNewestFirst } from '@/domain/balances';
 import { formatDayHeading, formatMonth } from '@/domain/dates';
@@ -86,7 +85,7 @@ export default function ActivityScreen() {
                 key={m.id}
                 movement={m}
                 subtitle={`${names.get(m.contactId) ?? '—'} · ${describeMovement(m).toLowerCase()}`}
-                onPress={() => router.push({ pathname: '/moviment/[id]', params: { id: m.id } })}
+                onPress={() => openMovement(m)}
               />
             ))}
           </View>

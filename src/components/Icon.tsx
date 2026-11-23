@@ -26,6 +26,7 @@ const ICONS = {
   payment: { ios: 'eurosign.circle', android: 'payments', web: 'payments' },
   home: { ios: 'house', android: 'home', web: 'home' },
   people: { ios: 'person.2', android: 'group', web: 'group' },
+  group: { ios: 'person.3', android: 'groups', web: 'groups' },
   chart: { ios: 'chart.bar.fill', android: 'bar_chart', web: 'bar_chart' },
   settings: { ios: 'gearshape', android: 'settings', web: 'settings' },
   camera: { ios: 'camera', android: 'photo_camera', web: 'photo_camera' },

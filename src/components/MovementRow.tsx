@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { signedEffect } from '@/domain/balances';
@@ -13,6 +14,12 @@ import { Icon, type IconName } from './Icon';
 export function describeMovement(m: Movement): string {
   if (m.kind === 'debt') return m.direction === 'owed' ? 'Et deu' : 'Li deus';
   return `${m.direction === 'in' ? 'T’ha pagat' : 'Li has pagat'} · ${PAYMENT_METHOD_LABELS[m.method]}`;
+}
+
+/** Opens the edit sheet: the movement itself, or the group expense it comes from. */
+export function openMovement(m: Movement): void {
+  if (m.expenseId) router.push({ pathname: '/despesa', params: { id: m.expenseId } });
+  else router.push({ pathname: '/moviment/[id]', params: { id: m.id } });
 }
 
 function visuals(m: Movement): { icon: IconName; color: string } {
@@ -49,6 +56,7 @@ export function MovementRow({ movement, subtitle, onPress, onLongPress }: Props)
           {movement.concept}
         </AppText>
         <View style={styles.lineRow}>
+          {movement.expenseId ? <Icon name="group" size={12} color={colors.textMuted} /> : null}
           {movement.receipt ? <Icon name="photo" size={12} color={colors.textMuted} /> : null}
           <AppText variant="small" color={colors.textMuted} numberOfLines={1} style={{ flexShrink: 1 }}>
             {line}

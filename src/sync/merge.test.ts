@@ -2,13 +2,20 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import type { Contact, Movement } from '../domain/types.ts';
+import type { Contact, Group, GroupExpense, Movement } from '../domain/types.ts';
 import {
   adoptUser,
   applyRemote,
   clearPushed,
   collectPush,
+  emptyRecords,
   emptySyncMeta,
+  expenseToRow,
+  groupToRow,
+  hasLocalChanges,
+  normalizeSyncMeta,
+  rowToExpense,
+  rowToGroup,
   markChanged,
   markDeleted,
   movementToRow,
@@ -43,7 +50,7 @@ const payment: Movement = {
 };
 
 function data(partial: Partial<LocalData> = {}): LocalData {
-  return { contacts: [], movements: [], sync: emptySyncMeta, ...partial };
+  return { ...emptyRecords, sync: emptySyncMeta, ...partial };
 }
 
 const remoteContact = (over: Partial<ContactRow> = {}): ContactRow => ({
@@ -73,7 +80,7 @@ describe('adoptUser', () => {
   it('uploads everything on the first sync', () => {
     const d = adoptUser(data({ contacts: [laia], movements: [debt] }), 'u1');
     assert.equal(d.sync.userId, 'u1');
-    assert.deepEqual(d.sync.pending, { contacts: ['c1'], movements: ['m1'] });
+    assert.deepEqual(d.sync.pending, { contacts: ['c1'], groups: [], movements: ['m1'], expenses: [] });
   });
 
   it('drops data that belongs to another account', () => {
@@ -91,7 +98,7 @@ describe('push bookkeeping', () => {
     // m2 is replaced while the push is in flight
     d = { ...d, movements: [debt, { ...payment, amountCents: 1500 }] };
     d = clearPushed(d, batch);
-    assert.deepEqual(d.sync.pending, { contacts: [], movements: ['m2'] });
+    assert.deepEqual(d.sync.pending, { contacts: [], groups: [], movements: ['m2'], expenses: [] });
   });
 
   it('turns deletions into tombstones and clears them once pushed', () => {
@@ -109,8 +116,7 @@ describe('applyRemote', () => {
     let d = data({ contacts: [laia] });
     d = applyRemote(
       d,
-      [remoteContact(), remoteContact({ id: 'c1', name: 'Laia Font', updated_at: '2026-11-23T08:00:00.000Z' })],
-      [],
+      { contacts: [remoteContact(), remoteContact({ id: 'c1', name: 'Laia Font', updated_at: '2026-11-23T08:00:00.000Z' })] },
     );
     assert.deepEqual(
       d.contacts.map((c) => c.name),
@@ -118,7 +124,7 @@ describe('applyRemote', () => {
     );
     assert.equal(d.sync.cursor.contacts, '2026-11-23T08:00:00.000Z');
 
-    d = applyRemote(d, [remoteContact({ deleted_at: '2026-11-23T09:00:00.000Z', updated_at: '2026-11-23T09:00:00.000Z' })], []);
+    d = applyRemote(d, { contacts: [remoteContact({ deleted_at: '2026-11-23T09:00:00.000Z', updated_at: '2026-11-23T09:00:00.000Z' })] });
     assert.deepEqual(
       d.contacts.map((c) => c.id),
       ['c1'],
@@ -128,7 +134,7 @@ describe('applyRemote', () => {
   it('never overwrites unpushed local changes or tombstones', () => {
     let d = data({ contacts: [laia] });
     d = { ...d, sync: markDeleted(markChanged(d.sync, 'contacts', ['c1']), 'contacts', ['c9']) };
-    d = applyRemote(d, [remoteContact({ id: 'c1', name: 'Una altra' }), remoteContact({ id: 'c9' })], []);
+    d = applyRemote(d, { contacts: [remoteContact({ id: 'c1', name: 'Una altra' }), remoteContact({ id: 'c9' })] });
     assert.deepEqual(
       d.contacts.map((c) => c.name),
       ['Laia'],
@@ -163,5 +169,54 @@ describe('receipt photos', () => {
     assert.deepEqual(d.sync.receipts.upload, ['r.jpg']);
     d = clearPushed(d, collectPush(d));
     assert.deepEqual(d.sync.receipts.upload, []);
+  });
+});
+
+describe('groups and expenses', () => {
+  const group: Group = { id: 'g1', name: 'Colla', memberIds: ['c1', 'c2'], createdAt: '2026-11-20T10:00:00.000Z' };
+  const expense: GroupExpense = {
+    id: 'e1',
+    groupId: 'g1',
+    concept: 'Dinar',
+    amountCents: 9000,
+    date: '2026-11-20',
+    paidBy: null,
+    participantIds: ['c1', 'c2'],
+    includesMe: true,
+    note: 'Can Ramon',
+    createdAt: '2026-11-20T15:00:00.000Z',
+  };
+  const meta = { updated_at: '2026-11-23T10:00:00.000Z', deleted_at: null };
+
+  it('round-trips groups and expenses', () => {
+    assert.deepEqual(rowToGroup({ ...groupToRow(group), ...meta }), group);
+    assert.deepEqual(rowToExpense({ ...expenseToRow(expense), ...meta }), expense);
+    const paidByFriend = { ...expense, paidBy: 'c2', includesMe: false, note: undefined };
+    delete paidByFriend.note;
+    assert.deepEqual(rowToExpense({ ...expenseToRow(paidByFriend), ...meta }), paidByFriend);
+  });
+
+  it('uploads groups and expenses on the first sync and pulls them', () => {
+    let d = adoptUser(data({ groups: [group], expenses: [expense] }), 'u1');
+    assert.deepEqual(d.sync.pending.groups, ['g1']);
+    assert.deepEqual(d.sync.pending.expenses, ['e1']);
+    assert.equal(hasLocalChanges(d.sync), true);
+    d = clearPushed(d, collectPush(d));
+    assert.equal(hasLocalChanges(d.sync), false);
+
+    d = applyRemote(d, { expenses: [{ ...expenseToRow({ ...expense, amountCents: 12000 }), ...meta }] });
+    assert.equal(d.expenses[0].amountCents, 12000);
+    assert.equal(d.sync.cursor.expenses, meta.updated_at);
+    assert.equal(d.sync.cursor.contacts, null);
+  });
+
+  it('upgrades sync state saved before groups existed', () => {
+    const old = { userId: 'u1', pending: { contacts: ['c1'], movements: [] }, cursor: { contacts: 'x', movements: 'y' } };
+    const meta = normalizeSyncMeta(old as never);
+    assert.deepEqual(meta.pending, { contacts: ['c1'], groups: [], movements: [], expenses: [] });
+    assert.deepEqual(meta.deleted.groups, []);
+    assert.equal(meta.cursor.expenses, null);
+    assert.equal(meta.cursor.contacts, 'x');
+    assert.equal(hasLocalChanges(meta), true);
   });
 });

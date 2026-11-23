@@ -7,7 +7,7 @@ import { Avatar } from '@/components/Avatar';
 import { BalanceBar, ProgressBar } from '@/components/BalanceBar';
 import { Button } from '@/components/Button';
 import { Icon } from '@/components/Icon';
-import { MovementRow } from '@/components/MovementRow';
+import { MovementRow, openMovement } from '@/components/MovementRow';
 import { balanceLabel } from '@/components/PersonRow';
 import { settlementProgress, sortNewestFirst } from '@/domain/balances';
 import { formatShortDate, todayISO } from '@/domain/dates';
@@ -252,7 +252,7 @@ function DetailPanel({ person, movements, today }: { person: Person; movements: 
           <MovementRow
             key={m.id}
             movement={m}
-            onPress={() => router.push({ pathname: '/moviment/[id]', params: { id: m.id } })}
+            onPress={() => openMovement(m)}
           />
         ))}
         {movements.length > 8 ? (

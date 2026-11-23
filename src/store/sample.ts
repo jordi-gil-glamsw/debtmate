@@ -1,8 +1,13 @@
 import { addDays, todayISO } from '@/domain/dates';
-import type { Contact, Movement } from '@/domain/types';
+import type { Contact, Group, GroupExpense, Movement } from '@/domain/types';
 
 /** Demo data matching the design mockups, with dates relative to today. */
-export function buildSampleData(newId: () => string): { contacts: Contact[]; movements: Movement[] } {
+export function buildSampleData(newId: () => string): {
+  contacts: Contact[];
+  movements: Movement[];
+  groups: Group[];
+  expenses: GroupExpense[];
+} {
   const today = todayISO();
   const now = new Date().toISOString();
   const day = (offset: number) => addDays(today, offset);
@@ -37,5 +42,15 @@ export function buildSampleData(newId: () => string): { contacts: Contact[]; mov
     debt(nuria, 'owe', 18, 'Llibre', -40),
     payment(nuria, 'out', 18, 'Efectiu', -25),
   ];
-  return { contacts, movements };
+  const colla: Group = { id: newId(), name: 'Colla del dinar', memberIds: [laia, pau, marta, oriol], createdAt: now };
+  const expense = (concept: string, euros: number, paidBy: string | null, participantIds: string[], offset: number): GroupExpense => ({
+    id: newId(), groupId: colla.id, concept, amountCents: Math.round(euros * 100), date: day(offset), paidBy,
+    participantIds, includesMe: true, createdAt: now,
+  });
+  const expenses: GroupExpense[] = [
+    expense('Dinar Can Ramon', 96, null, [laia, pau, marta], -6),
+    expense('Calçotada', 125, pau, [laia, pau, marta, oriol], -3),
+  ];
+
+  return { contacts, movements, groups: [colla], expenses };
 }

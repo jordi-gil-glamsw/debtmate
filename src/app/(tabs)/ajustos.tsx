@@ -21,7 +21,7 @@ import {
   type ReminderPermission,
 } from '@/features/reminders/notifications';
 import { confirm, notify, shareText } from '@/lib/dialogs';
-import { eraseAllData, loadSampleData, readState, updateSettings, useSettings, useSyncMeta } from '@/store/store';
+import { eraseAllData, loadSampleData, readAllMovements, readState, updateSettings, useSettings, useSyncMeta } from '@/store/store';
 import { hasLocalChanges, type SyncMeta } from '@/sync/merge';
 import { syncNow, useSyncStatus, type SyncStatus } from '@/sync/sync';
 import { colors, radius, space, touchTarget } from '@/theme/tokens';
@@ -113,7 +113,8 @@ async function testReminder() {
 }
 
 async function exportCsv() {
-  const { contacts, movements } = readState();
+  const { contacts } = readState();
+  const movements = readAllMovements();
   if (movements.length === 0) {
     notify('Res a exportar', 'Encara no hi ha cap moviment.');
     return;
@@ -122,7 +123,8 @@ async function exportCsv() {
 }
 
 async function askLoadSample() {
-  const hasData = readState().movements.length > 0;
+  const { movements, expenses } = readState();
+  const hasData = movements.length + expenses.length > 0;
   if (hasData && !(await confirm('Carregar dades d’exemple', 'Se substituiran les dades actuals.', 'Substitueix', true))) return;
   loadSampleData();
 }

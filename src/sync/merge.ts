@@ -7,46 +7,72 @@
  * Conflicts resolve as last-writer-wins, except that a local change not yet pushed
  * always wins over a pulled row.
  */
-import type { Contact, Id, Movement } from '../domain/types';
+import type { Contact, Group, GroupExpense, Id, Movement } from '../domain/types';
 
-export type Table = 'contacts' | 'movements';
+/** Synced tables, in push order (a row is pushed after the rows it references). */
+export const TABLES = ['contacts', 'groups', 'movements', 'expenses'] as const;
+export type Table = (typeof TABLES)[number];
+
+type PerTable<T> = Record<Table, T>;
 
 export type SyncMeta = {
   /** Account the local data belongs to (null = never synced). */
   userId: string | null;
-  pending: Record<Table, Id[]>;
-  deleted: Record<Table, Id[]>;
+  pending: PerTable<Id[]>;
+  deleted: PerTable<Id[]>;
   /** Highest server `updated_at` already pulled, per table. */
-  cursor: Record<Table, string | null>;
+  cursor: PerTable<string | null>;
   lastSyncedAt: string | null;
   /** Receipt photos to upload to / remove from the account's storage (file names). */
   receipts: { upload: string[]; remove: string[] };
 };
 
-export type LocalData = {
+/** The synced part of the app state. */
+export type Records = {
   contacts: Contact[];
+  groups: Group[];
   movements: Movement[];
-  sync: SyncMeta;
+  expenses: GroupExpense[];
 };
+
+export type LocalData = Records & { sync: SyncMeta };
+
+const perTable = <T>(make: () => T): PerTable<T> =>
+  Object.fromEntries(TABLES.map((t) => [t, make()])) as PerTable<T>;
+
+export const emptyRecords: Records = { contacts: [], groups: [], movements: [], expenses: [] };
 
 export const emptySyncMeta: SyncMeta = {
   userId: null,
-  pending: { contacts: [], movements: [] },
-  deleted: { contacts: [], movements: [] },
-  cursor: { contacts: null, movements: null },
+  pending: perTable(() => []),
+  deleted: perTable(() => []),
+  cursor: perTable(() => null),
   lastSyncedAt: null,
   receipts: { upload: [], remove: [] },
 };
 
+/** Fills in what a SyncMeta saved by an older app version lacks (e.g. tables added later). */
+export function normalizeSyncMeta(saved: Partial<SyncMeta> | undefined): SyncMeta {
+  if (!saved) return emptySyncMeta;
+  return {
+    ...emptySyncMeta,
+    ...saved,
+    pending: { ...emptySyncMeta.pending, ...saved.pending },
+    deleted: { ...emptySyncMeta.deleted, ...saved.deleted },
+    cursor: { ...emptySyncMeta.cursor, ...saved.cursor },
+    receipts: { ...emptySyncMeta.receipts, ...saved.receipts },
+  };
+}
+
 // ─── Remote rows (snake_case, as in supabase/migrations) ──────────────────────
+
+type RowMeta = { updated_at: string; deleted_at: string | null };
 
 export type ContactRow = {
   id: Id;
   name: string;
   created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
-};
+} & RowMeta;
 
 export type MovementRow = {
   id: Id;
@@ -61,12 +87,39 @@ export type MovementRow = {
   note: string | null;
   receipt: string | null;
   created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
+} & RowMeta;
+
+export type GroupRow = {
+  id: Id;
+  name: string;
+  member_ids: Id[];
+  created_at: string;
+} & RowMeta;
+
+export type ExpenseRow = {
+  id: Id;
+  group_id: Id;
+  concept: string;
+  amount_cents: number;
+  date: string;
+  paid_by: Id | null;
+  participant_ids: Id[];
+  includes_me: boolean;
+  note: string | null;
+  created_at: string;
+} & RowMeta;
+
+export type RemoteRows = {
+  contacts: ContactRow[];
+  groups: GroupRow[];
+  movements: MovementRow[];
+  expenses: ExpenseRow[];
 };
 
-export type ContactUpsert = Pick<ContactRow, 'id' | 'name' | 'created_at'>;
-export type MovementUpsert = Omit<MovementRow, 'updated_at' | 'deleted_at' | 'receipt'> & { receipt?: string | null };
+export type ContactUpsert = Omit<ContactRow, keyof RowMeta>;
+export type MovementUpsert = Omit<MovementRow, keyof RowMeta | 'receipt'> & { receipt?: string | null };
+export type GroupUpsert = Omit<GroupRow, keyof RowMeta>;
+export type ExpenseUpsert = Omit<ExpenseRow, keyof RowMeta>;
 
 export function contactToRow(c: Contact): ContactUpsert {
   return { id: c.id, name: c.name, created_at: c.createdAt };
@@ -90,6 +143,25 @@ export function movementToRow(m: Movement, { withReceipt = true }: { withReceipt
     note: m.note ?? null,
     ...(withReceipt ? { receipt: m.receipt ?? null } : {}),
     created_at: m.createdAt,
+  };
+}
+
+export function groupToRow(g: Group): GroupUpsert {
+  return { id: g.id, name: g.name, member_ids: g.memberIds, created_at: g.createdAt };
+}
+
+export function expenseToRow(e: GroupExpense): ExpenseUpsert {
+  return {
+    id: e.id,
+    group_id: e.groupId,
+    concept: e.concept,
+    amount_cents: e.amountCents,
+    date: e.date,
+    paid_by: e.paidBy,
+    participant_ids: e.participantIds,
+    includes_me: e.includesMe,
+    note: e.note ?? null,
+    created_at: e.createdAt,
   };
 }
 
@@ -124,6 +196,25 @@ export function rowToMovement(r: MovementRow): Movement {
   };
 }
 
+export function rowToGroup(r: GroupRow): Group {
+  return { id: r.id, name: r.name, memberIds: r.member_ids ?? [], createdAt: r.created_at };
+}
+
+export function rowToExpense(r: ExpenseRow): GroupExpense {
+  return {
+    id: r.id,
+    groupId: r.group_id,
+    concept: r.concept,
+    amountCents: Number(r.amount_cents),
+    date: r.date,
+    paidBy: r.paid_by,
+    participantIds: r.participant_ids ?? [],
+    includesMe: r.includes_me,
+    ...(r.note ? { note: r.note } : {}),
+    createdAt: r.created_at,
+  };
+}
+
 // ─── Local bookkeeping ────────────────────────────────────────────────────────
 
 const union = (a: Id[], b: Id[]) => (b.length === 0 ? a : [...new Set([...a, ...b])]);
@@ -131,6 +222,8 @@ const without = (a: Id[], b: Iterable<Id>) => {
   const drop = new Set(b);
   return drop.size === 0 ? a : a.filter((id) => !drop.has(id));
 };
+const mapTables = <T, U>(source: PerTable<T>, fn: (value: T, table: Table) => U): PerTable<U> =>
+  Object.fromEntries(TABLES.map((t) => [t, fn(source[t], t)])) as PerTable<U>;
 
 /** Records created or changed locally. */
 export function markChanged(meta: SyncMeta, table: Table, ids: Id[]): SyncMeta {
@@ -148,13 +241,8 @@ export function markDeleted(meta: SyncMeta, table: Table, ids: Id[]): SyncMeta {
 
 export function hasLocalChanges(meta: SyncMeta): boolean {
   return (
-    meta.pending.contacts.length +
-      meta.pending.movements.length +
-      meta.deleted.contacts.length +
-      meta.deleted.movements.length +
-      meta.receipts.upload.length +
-      meta.receipts.remove.length >
-    0
+    TABLES.some((t) => meta.pending[t].length + meta.deleted[t].length > 0) ||
+    meta.receipts.upload.length + meta.receipts.remove.length > 0
   );
 }
 
@@ -192,10 +280,7 @@ export function adoptUser(data: LocalData, userId: string): LocalData {
       sync: {
         ...data.sync,
         userId,
-        pending: {
-          contacts: union(data.sync.pending.contacts, data.contacts.map((c) => c.id)),
-          movements: union(data.sync.pending.movements, data.movements.map((m) => m.id)),
-        },
+        pending: mapTables(data.sync.pending, (ids, t) => union(ids, data[t].map((r) => r.id))),
         receipts: {
           ...data.sync.receipts,
           upload: union(
@@ -203,50 +288,52 @@ export function adoptUser(data: LocalData, userId: string): LocalData {
             data.movements.flatMap((m) => (m.receipt ? [m.receipt] : [])),
           ),
         },
-        cursor: { contacts: null, movements: null },
+        cursor: perTable(() => null),
       },
     };
   }
-  return { contacts: [], movements: [], sync: { ...emptySyncMeta, userId } };
+  return { ...emptyRecords, sync: { ...emptySyncMeta, userId } };
 }
 
 /** What a push sends. Records are kept by reference to detect edits made during the push. */
-export type PushBatch = {
-  contacts: Contact[];
-  movements: Movement[];
-  deleted: Record<Table, Id[]>;
+export type PushBatch = Records & {
+  deleted: PerTable<Id[]>;
   receipts: { upload: string[]; remove: string[] };
 };
 
+function pendingOf<T extends { id: Id }>(records: T[], ids: Id[]): T[] {
+  const set = new Set(ids);
+  return records.filter((r) => set.has(r.id));
+}
+
 export function collectPush(data: LocalData): PushBatch {
-  const pendingContacts = new Set(data.sync.pending.contacts);
-  const pendingMovements = new Set(data.sync.pending.movements);
+  const { pending, deleted, receipts } = data.sync;
   return {
-    contacts: data.contacts.filter((c) => pendingContacts.has(c.id)),
-    movements: data.movements.filter((m) => pendingMovements.has(m.id)),
-    deleted: { contacts: [...data.sync.deleted.contacts], movements: [...data.sync.deleted.movements] },
-    receipts: { upload: [...data.sync.receipts.upload], remove: [...data.sync.receipts.remove] },
+    contacts: pendingOf(data.contacts, pending.contacts),
+    groups: pendingOf(data.groups, pending.groups),
+    movements: pendingOf(data.movements, pending.movements),
+    expenses: pendingOf(data.expenses, pending.expenses),
+    deleted: mapTables(deleted, (ids) => [...ids]),
+    receipts: { upload: [...receipts.upload], remove: [...receipts.remove] },
   };
+}
+
+/** Ids from the batch whose record is still the very same object (not edited meanwhile). */
+function unchanged<T extends { id: Id }>(now: T[], sent: T[]): Id[] {
+  const byId = new Map(now.map((r) => [r.id, r]));
+  return sent.filter((r) => byId.get(r.id) === r).map((r) => r.id);
 }
 
 /** After a successful push: clear what was sent, unless it changed again meanwhile. */
 export function clearPushed(data: LocalData, batch: PushBatch): LocalData {
-  const contactNow = new Map(data.contacts.map((c) => [c.id, c]));
-  const movementNow = new Map(data.movements.map((m) => [m.id, m]));
-  const doneContacts = batch.contacts.filter((c) => contactNow.get(c.id) === c).map((c) => c.id);
-  const doneMovements = batch.movements.filter((m) => movementNow.get(m.id) === m).map((m) => m.id);
   return {
     ...data,
     sync: {
       ...data.sync,
-      pending: {
-        contacts: without(data.sync.pending.contacts, doneContacts),
-        movements: without(data.sync.pending.movements, doneMovements),
-      },
-      deleted: {
-        contacts: without(data.sync.deleted.contacts, batch.deleted.contacts),
-        movements: without(data.sync.deleted.movements, batch.deleted.movements),
-      },
+      pending: mapTables(data.sync.pending, (ids, t) =>
+        without(ids, unchanged<{ id: Id }>(data[t], batch[t])),
+      ),
+      deleted: mapTables(data.sync.deleted, (ids, t) => without(ids, batch.deleted[t])),
       receipts: {
         upload: without(data.sync.receipts.upload, batch.receipts.upload),
         remove: without(data.sync.receipts.remove, batch.receipts.remove),
@@ -278,17 +365,18 @@ function mergeTable<T extends { id: Id }, R extends { id: Id; deleted_at: string
 }
 
 /** Merges pulled rows into local data and advances the cursors. */
-export function applyRemote(data: LocalData, contacts: ContactRow[], movements: MovementRow[]): LocalData {
+export function applyRemote(data: LocalData, rows: Partial<RemoteRows>): LocalData {
   const { pending, deleted } = data.sync;
+  const skip = (t: Table) => new Set([...pending[t], ...deleted[t]]);
+  const r: RemoteRows = { contacts: [], groups: [], movements: [], expenses: [], ...rows };
   return {
-    contacts: mergeTable(data.contacts, contacts, new Set([...pending.contacts, ...deleted.contacts]), rowToContact),
-    movements: mergeTable(data.movements, movements, new Set([...pending.movements, ...deleted.movements]), rowToMovement),
+    contacts: mergeTable(data.contacts, r.contacts, skip('contacts'), rowToContact),
+    groups: mergeTable(data.groups, r.groups, skip('groups'), rowToGroup),
+    movements: mergeTable(data.movements, r.movements, skip('movements'), rowToMovement),
+    expenses: mergeTable(data.expenses, r.expenses, skip('expenses'), rowToExpense),
     sync: {
       ...data.sync,
-      cursor: {
-        contacts: maxCursor(data.sync.cursor.contacts, contacts),
-        movements: maxCursor(data.sync.cursor.movements, movements),
-      },
+      cursor: mapTables(data.sync.cursor, (cursor, t) => maxCursor(cursor, r[t])),
     },
   };
 }

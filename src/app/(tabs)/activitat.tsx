@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -85,6 +86,7 @@ export default function ActivityScreen() {
                 key={m.id}
                 movement={m}
                 subtitle={`${names.get(m.contactId) ?? '—'} · ${describeMovement(m).toLowerCase()}`}
+                onPress={() => router.push({ pathname: '/moviment/[id]', params: { id: m.id } })}
               />
             ))}
           </View>

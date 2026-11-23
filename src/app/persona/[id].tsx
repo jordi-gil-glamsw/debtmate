@@ -142,7 +142,12 @@ export default function PersonScreen() {
       ) : (
         <View>
           {sortNewestFirst(movements).map((m) => (
-            <MovementRow key={m.id} movement={m} onLongPress={() => onDeleteMovement(m)} />
+            <MovementRow
+              key={m.id}
+              movement={m}
+              onPress={() => router.push({ pathname: '/moviment/[id]', params: { id: m.id } })}
+              onLongPress={() => onDeleteMovement(m)}
+            />
           ))}
           <AppText variant="small" color={colors.textFaint} style={{ marginTop: space.sm }}>
             Mantén premut un moviment per esborrar-lo.

@@ -71,6 +71,7 @@ export default function RootLayout() {
             <Stack.Screen name="persona/[id]" options={{ title: '' }} />
             <Stack.Screen name="nou" options={{ ...sheetOptions, sheetAllowedDetents: [1] }} />
             <Stack.Screen name="pagament/[id]" options={{ ...sheetOptions, sheetAllowedDetents: [0.85, 1] }} />
+            <Stack.Screen name="moviment/[id]" options={{ ...sheetOptions, sheetAllowedDetents: [1] }} />
           </Stack.Protected>
           <Stack.Protected guard={!onboarded}>
             <Stack.Screen name="benvinguda" options={{ headerShown: false }} />

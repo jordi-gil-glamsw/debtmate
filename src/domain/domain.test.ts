@@ -86,3 +86,14 @@ describe('dates', () => {
     assert.equal(addDays('2026-12-31', 1), '2027-01-01');
   });
 });
+
+describe('formatFieldDate', () => {
+  it('uses relative words near today and adds the year only for other years', async () => {
+    const { formatFieldDate } = await import('./dates.ts');
+    assert.equal(formatFieldDate('2026-11-23', '2026-11-23'), 'Avui');
+    assert.equal(formatFieldDate('2026-11-22', '2026-11-23'), 'Ahir');
+    assert.equal(formatFieldDate('2026-11-24', '2026-11-23'), 'Demà');
+    assert.equal(formatFieldDate('2026-11-10', '2026-11-23'), '10 nov.');
+    assert.equal(formatFieldDate('2025-12-31', '2026-01-02'), '31 des. 2025');
+  });
+});

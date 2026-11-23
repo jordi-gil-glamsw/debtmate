@@ -15,7 +15,7 @@ export function todayISO(): string {
   return toISODate(new Date());
 }
 
-function parseISODate(iso: string): Date {
+export function parseISODate(iso: string): Date {
   const [y, m, d] = iso.split('-').map(Number);
   return new Date(y, m - 1, d);
 }
@@ -30,6 +30,15 @@ export function addDays(iso: string, days: number): string {
 export function formatShortDate(iso: string): string {
   const d = parseISODate(iso);
   return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}`;
+}
+
+/** Label for a date field: "Avui", "Ahir", "Demà", "22 nov." or "22 nov. 2025" (other years). */
+export function formatFieldDate(iso: string, today: string = todayISO()): string {
+  if (iso === today) return 'Avui';
+  if (iso === addDays(today, -1)) return 'Ahir';
+  if (iso === addDays(today, 1)) return 'Demà';
+  const short = formatShortDate(iso);
+  return iso.slice(0, 4) === today.slice(0, 4) ? short : `${short} ${iso.slice(0, 4)}`;
 }
 
 /** "Avui", "Ahir" or "Dijous, 20 nov." */

@@ -24,18 +24,23 @@ type Props = {
   movement: Movement;
   /** Shown instead of the date line (e.g. the person's name in the activity feed). */
   subtitle?: string;
+  /** Usually opens the edit sheet. */
+  onPress?: () => void;
   onLongPress?: () => void;
 };
 
-export function MovementRow({ movement, subtitle, onLongPress }: Props) {
+export function MovementRow({ movement, subtitle, onPress, onLongPress }: Props) {
   const { icon, color } = visuals(movement);
   const effect = signedEffect(movement);
   const line = subtitle ?? `${formatShortDate(movement.date)} · ${describeMovement(movement)}`;
   return (
     <Pressable
+      onPress={onPress}
       onLongPress={onLongPress}
-      accessibilityHint={onLongPress ? 'Mantén premut per esborrar' : undefined}
-      style={styles.row}>
+      disabled={!onPress && !onLongPress}
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityHint={onPress ? 'Obre el moviment per editar-lo' : onLongPress ? 'Mantén premut per esborrar' : undefined}
+      style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}>
       <View style={styles.icon}>
         <Icon name={icon} size={18} color={color} />
       </View>

@@ -6,12 +6,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '@/components/AppText';
 import { Avatar } from '@/components/Avatar';
 import { Button } from '@/components/Button';
-import { Chip } from '@/components/Chip';
+import { DateField } from '@/components/DateField';
+import { DueDateField } from '@/components/DueDateField';
 import { FieldGroup, FieldRow, TextField } from '@/components/Field';
 import { Icon } from '@/components/Icon';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { SheetHeader } from '@/components/SheetHeader';
-import { addDays, formatShortDate, todayISO } from '@/domain/dates';
+import { todayISO } from '@/domain/dates';
 import { parseAmount } from '@/domain/money';
 import { requestReminderPermission } from '@/features/reminders/notifications';
 import { refreshReminders } from '@/features/reminders/ReminderManager';
@@ -19,14 +20,6 @@ import { addContact, addMovement, readState, useContactsWithBalance } from '@/st
 import { colors, fonts, radius, space } from '@/theme/tokens';
 
 type Direction = 'owed' | 'owe';
-type Due = 'none' | '1w' | '2w' | '1m';
-
-const DUE_OPTIONS: { value: Due; label: string; days: number }[] = [
-  { value: 'none', label: 'Sense límit', days: 0 },
-  { value: '1w', label: '1 setmana', days: 7 },
-  { value: '2w', label: '2 setmanes', days: 14 },
-  { value: '1m', label: '1 mes', days: 30 },
-];
 
 export default function NewMovementSheet() {
   const params = useLocalSearchParams<{ direction?: Direction; contactId?: string }>();
@@ -39,29 +32,29 @@ export default function NewMovementSheet() {
   const [creatingNew, setCreatingNew] = useState(!params.contactId && people.length === 0);
   const [newName, setNewName] = useState('');
   const [concept, setConcept] = useState('');
-  const [due, setDue] = useState<Due>('none');
+  const today = todayISO();
+  const [date, setDate] = useState(today);
+  const [dueDate, setDueDate] = useState<string | undefined>(undefined);
 
   const amount = parseAmount(amountText);
   const hasPerson = creatingNew ? newName.trim().length > 0 : Boolean(contactId);
   const canSave = amount !== null && amount > 0 && hasPerson;
-  const today = todayISO();
 
   const save = () => {
     if (!canSave || amount === null) return;
     const id = creatingNew ? addContact(newName).id : contactId!;
-    const dueDays = DUE_OPTIONS.find((d) => d.value === due)!.days;
     addMovement({
       kind: 'debt',
       direction,
       contactId: id,
       amountCents: amount,
       concept: concept.trim() || (direction === 'owed' ? 'Préstec' : 'Deute'),
-      date: today,
-      dueDate: dueDays ? addDays(today, dueDays) : undefined,
+      date,
+      dueDate,
     });
     router.back();
     // Ask for notifications at the moment they make sense: the first debt with a due date.
-    if (dueDays && readState().settings.reminders) {
+    if (dueDate && readState().settings.reminders) {
       requestReminderPermission()
         .then(() => refreshReminders())
         .catch(() => {});
@@ -162,12 +155,10 @@ export default function NewMovementSheet() {
         ) : null}
         <TextField label="Concepte" value={concept} onChangeText={setConcept} placeholder="Sopar, entrades…" />
         <FieldRow label="Data">
-          <AppText variant="body">Avui, {formatShortDate(today)}</AppText>
+          <DateField value={date} onChange={setDate} maximum={today} accessibilityLabel="Data del deute" />
         </FieldRow>
         <FieldRow label="Límit" last>
-          {DUE_OPTIONS.map((d) => (
-            <Chip key={d.value} label={d.label} selected={due === d.value} onPress={() => setDue(d.value)} />
-          ))}
+          <DueDateField value={dueDate} onChange={setDueDate} minimum={date} />
         </FieldRow>
       </FieldGroup>
 

@@ -6,6 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '@/components/AppText';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
+import { DateField } from '@/components/DateField';
+import { FieldGroup, FieldRow } from '@/components/Field';
 import { Icon } from '@/components/Icon';
 import { SheetHeader } from '@/components/SheetHeader';
 import { balanceOf } from '@/domain/balances';
@@ -30,6 +32,8 @@ export default function PaymentSheet() {
   const [preset, setPreset] = useState<Preset>('all');
   const [otherText, setOtherText] = useState('');
   const [method, setMethod] = useState<PaymentMethod>('bizum');
+  const today = todayISO();
+  const [date, setDate] = useState(today);
 
   const amount = preset === 'all' ? outstanding : preset === 'half' ? half : parseAmount(otherText);
   const valid = amount !== null && amount > 0 && amount <= outstanding;
@@ -59,7 +63,7 @@ export default function PaymentSheet() {
       amountCents: amount,
       method,
       concept: theyPay ? `Pagament rebut (${PAYMENT_METHOD_LABELS[method]})` : `Pagament fet (${PAYMENT_METHOD_LABELS[method]})`,
-      date: todayISO(),
+      date,
     });
     router.back();
   };
@@ -145,6 +149,12 @@ export default function PaymentSheet() {
           ))}
         </View>
       </View>
+
+      <FieldGroup>
+        <FieldRow label="Data" last>
+          <DateField value={date} onChange={setDate} maximum={today} accessibilityLabel="Data del pagament" />
+        </FieldRow>
+      </FieldGroup>
 
       <View style={styles.result} accessibilityLiveRegion="polite">
         <Icon name={valid ? 'check' : 'payment'} size={18} color={valid ? colors.accent : colors.textMuted} />

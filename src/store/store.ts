@@ -169,6 +169,18 @@ export function addMovement(input: NewMovement): Movement {
   return movement;
 }
 
+/** Replaces a movement (same id) with its edited version. */
+export function updateMovement(movement: Movement): void {
+  setState((s) => {
+    if (!s.movements.some((m) => m.id === movement.id)) return s;
+    return {
+      ...s,
+      movements: s.movements.map((m) => (m.id === movement.id ? movement : m)),
+      sync: markChanged(s.sync, 'movements', [movement.id]),
+    };
+  });
+}
+
 export function deleteMovement(id: Id): void {
   setState((s) => ({
     ...s,

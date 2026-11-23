@@ -38,7 +38,7 @@ Sense configurar res, l'app funciona sense compte (les dades només es guarden a
 Per activar els comptes:
 
 1. Crea un projecte a [supabase.com](https://supabase.com) (el pla gratuït n'hi ha prou).
-2. **SQL Editor**: enganxa i executa `supabase/migrations/0001_init.sql`.
+2. **SQL Editor**: enganxa i executa, per ordre, `supabase/migrations/0001_init.sql` i `0002_grants.sql`.
 3. Copia `.env.example` a `.env.local` i omple'l amb la URL i la *publishable key*
    (*Project Settings → API Keys*). Reinicia `npx expo start`.
 4. **Correu amb codi**: a *Authentication → Email Templates → Magic Link*, posa el codi al missatge,

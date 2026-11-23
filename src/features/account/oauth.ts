@@ -7,7 +7,7 @@ import { Platform } from 'react-native';
 
 import { supabase } from '@/lib/supabase';
 
-import { AuthCancelled } from './auth';
+import { AuthCancelled } from './errors';
 
 function client() {
   if (!supabase) throw new Error('Els comptes no estan configurats en aquesta versió.');
@@ -54,8 +54,13 @@ export async function signInWithApple(): Promise<void> {
   }
 }
 
+/** Where Supabase sends the user back after Google or an email link: opens this app. */
+export function authRedirectUrl(): string {
+  return Linking.createURL('auth/callback');
+}
+
 /** Reads the tokens (or PKCE code) Supabase appends to the redirect URL. */
-async function createSessionFromUrl(url: string): Promise<void> {
+export async function createSessionFromUrl(url: string): Promise<void> {
   const params = new URLSearchParams();
   const [beforeHash, hash = ''] = url.split('#');
   const query = beforeHash.split('?')[1] ?? '';
@@ -79,7 +84,7 @@ async function createSessionFromUrl(url: string): Promise<void> {
 
 /** Google through the system browser (ASWebAuthenticationSession / Custom Tabs). */
 export async function signInWithGoogle(): Promise<void> {
-  const redirectTo = Linking.createURL('auth/callback');
+  const redirectTo = authRedirectUrl();
   const { data, error } = await client().auth.signInWithOAuth({
     provider: 'google',
     options: { redirectTo, skipBrowserRedirect: true },

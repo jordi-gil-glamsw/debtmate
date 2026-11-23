@@ -2,6 +2,13 @@
 // the URL when the app loads again. Native Sign in with Apple is iOS only.
 import { supabase } from '@/lib/supabase';
 
+/** The web client reads the session from the URL by itself (detectSessionInUrl). */
+export function authRedirectUrl(): string {
+  return window.location.origin;
+}
+
+export async function createSessionFromUrl(_url: string): Promise<void> {}
+
 export async function isAppleSignInAvailable(): Promise<boolean> {
   return false;
 }

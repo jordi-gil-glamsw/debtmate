@@ -3,12 +3,9 @@ import { clearAccountData, readLocalData } from '@/store/store';
 import { hasLocalChanges } from '@/sync/merge';
 import { syncNow } from '@/sync/sync';
 
-/** Thrown when the user closes the Apple/Google sheet: callers should just ignore it. */
-export class AuthCancelled extends Error {
-  constructor() {
-    super('cancelled');
-  }
-}
+import { authRedirectUrl } from './oauth';
+
+export { AuthCancelled } from './errors';
 
 function client() {
   if (!supabase) throw new Error('Els comptes no estan configurats en aquesta versió.');
@@ -31,7 +28,11 @@ export function authErrorMessage(e: unknown): string {
 // ─── Email with a one-time code (no deep links needed, works everywhere) ──────
 
 export async function sendEmailCode(email: string): Promise<void> {
-  const { error } = await client().auth.signInWithOtp({ email: email.trim(), options: { shouldCreateUser: true } });
+  // The email should carry a code ({{ .Token }}); if a template still sends a link, it opens the app.
+  const { error } = await client().auth.signInWithOtp({
+    email: email.trim(),
+    options: { shouldCreateUser: true, emailRedirectTo: authRedirectUrl() },
+  });
   if (error) throw error;
 }
 

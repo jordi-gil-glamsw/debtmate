@@ -1,8 +1,10 @@
+import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/AppText';
 import { Button } from '@/components/Button';
+import { cloudEnabled } from '@/features/account/session';
 import { completeOnboarding, loadSampleData } from '@/store/store';
 import { colors, space } from '@/theme/tokens';
 
@@ -37,8 +39,13 @@ export default function WelcomeScreen() {
             completeOnboarding();
           }}
         />
+        {cloudEnabled ? (
+          <Button label="Ja tinc un compte" variant="ghost" onPress={() => router.push('/compte')} />
+        ) : null}
         <AppText variant="small" color={colors.textMuted} style={styles.note}>
-          Les dades es guarden només en aquest dispositiu. Aviat podràs crear un compte per sincronitzar-les.
+          {cloudEnabled
+            ? 'Pots començar sense compte: les dades es guarden en aquest dispositiu i les podràs sincronitzar més endavant.'
+            : 'Les dades es guarden només en aquest dispositiu.'}
         </AppText>
       </View>
     </View>

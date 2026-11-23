@@ -24,6 +24,12 @@ const ICONS = {
   personAdd: { ios: 'person.badge.plus', android: 'person_add', web: 'person_add' },
   receipt: { ios: 'doc.text', android: 'receipt_long', web: 'receipt_long' },
   payment: { ios: 'eurosign.circle', android: 'payments', web: 'payments' },
+  mail: { ios: 'envelope', android: 'mail', web: 'mail' },
+  sync: { ios: 'arrow.triangle.2.circlepath', android: 'sync', web: 'sync' },
+  cloud: { ios: 'icloud', android: 'cloud', web: 'cloud' },
+  cloudDone: { ios: 'checkmark.icloud', android: 'cloud_done', web: 'cloud_done' },
+  signOut: { ios: 'rectangle.portrait.and.arrow.right', android: 'logout', web: 'logout' },
+  deleteAccount: { ios: 'person.crop.circle.badge.xmark', android: 'person_remove', web: 'person_remove' },
 } satisfies Record<string, SymbolName>;
 
 export type IconName = keyof typeof ICONS;

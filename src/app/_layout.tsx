@@ -8,6 +8,7 @@ import { useEffect } from 'react';
 
 import { LockGate } from '@/features/lock/LockGate';
 import { useOnboarded } from '@/store/store';
+import { SyncManager } from '@/sync/SyncManager';
 import { colors, fonts } from '@/theme/tokens';
 
 SplashScreen.preventAutoHideAsync();
@@ -52,6 +53,7 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={theme}>
       <StatusBar style="light" />
+      <SyncManager />
       <LockGate>
         <Stack
           screenOptions={{
@@ -71,6 +73,8 @@ export default function RootLayout() {
           <Stack.Protected guard={!onboarded}>
             <Stack.Screen name="benvinguda" options={{ headerShown: false }} />
           </Stack.Protected>
+          <Stack.Screen name="compte" options={{ ...sheetOptions, sheetAllowedDetents: [1] }} />
+          <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
         </Stack>
       </LockGate>
     </ThemeProvider>

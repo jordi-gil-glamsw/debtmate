@@ -10,7 +10,8 @@
     "backgroundColor": "#0E0F13",
     "ios": {
       "icon": "./assets/expo.icon",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "usesAppleSignIn": true
     },
     "android": {
       "adaptiveIcon": {
@@ -41,7 +42,8 @@
         {
           "faceIDPermission": "DebtMate fa servir Face ID per protegir les teves dades."
         }
-      ]
+      ],
+      "expo-apple-authentication"
     ],
     "experiments": {
       "typedRoutes": true,

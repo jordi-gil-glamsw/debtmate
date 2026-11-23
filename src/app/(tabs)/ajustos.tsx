@@ -1,15 +1,21 @@
 import Constants from 'expo-constants';
 import * as LocalAuthentication from 'expo-local-authentication';
+import { router } from 'expo-router';
 import type { ReactNode } from 'react';
-import { Platform, Pressable, StyleSheet, Switch, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Switch, View } from 'react-native';
 
 import { AppText } from '@/components/AppText';
+import { Avatar } from '@/components/Avatar';
 import { Icon, type IconName } from '@/components/Icon';
 import { Screen } from '@/components/Screen';
-import { toISODate } from '@/domain/dates';
+import { formatShortDate, toISODate } from '@/domain/dates';
 import { movementsToCsv } from '@/domain/export';
+import { authErrorMessage, deleteAccount, hasUnsyncedChanges, signOut } from '@/features/account/auth';
+import { accountName, cloudEnabled, useSession } from '@/features/account/session';
 import { confirm, notify, shareText } from '@/lib/dialogs';
-import { eraseAllData, loadSampleData, readState, updateSettings, useSettings } from '@/store/store';
+import { eraseAllData, loadSampleData, readState, updateSettings, useSettings, useSyncMeta } from '@/store/store';
+import { hasLocalChanges, type SyncMeta } from '@/sync/merge';
+import { syncNow, useSyncStatus, type SyncStatus } from '@/sync/sync';
 import { colors, radius, space, touchTarget } from '@/theme/tokens';
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -82,27 +88,129 @@ async function askLoadSample() {
   loadSampleData();
 }
 
-async function askErase() {
-  if (await confirm('Esborrar totes les dades', 'Aquesta acció no es pot desfer.', 'Esborra', true)) eraseAllData();
+async function askErase(signedIn: boolean) {
+  const message = signedIn
+    ? 'S’esborraran d’aquest dispositiu i del teu compte. Aquesta acció no es pot desfer.'
+    : 'Aquesta acció no es pot desfer.';
+  if (await confirm('Esborrar totes les dades', message, 'Esborra', true)) eraseAllData();
+}
+
+async function askSignOut() {
+  const unsynced = await hasUnsyncedChanges();
+  const warning = unsynced ? 'Hi ha canvis que encara no s’han pogut desar al compte i es perdran. ' : '';
+  const ok = await confirm(
+    'Tancar la sessió',
+    `${warning}Les dades es queden al teu compte i s’esborraran d’aquest dispositiu.`,
+    'Tanca la sessió',
+    true,
+  );
+  if (!ok) return;
+  try {
+    await signOut();
+  } catch (e) {
+    notify('No s’ha pogut tancar la sessió', authErrorMessage(e));
+  }
+}
+
+async function askDeleteAccount() {
+  const ok = await confirm(
+    'Eliminar el compte',
+    'S’eliminaran el compte i totes les dades, al núvol i en aquest dispositiu. No es pot desfer.',
+    'Elimina el compte',
+    true,
+  );
+  if (!ok) return;
+  try {
+    await deleteAccount();
+  } catch (e) {
+    notify('No s’ha pogut eliminar el compte', authErrorMessage(e));
+  }
+}
+
+function formatSyncedAt(iso: string): string {
+  const d = new Date(iso);
+  const time = d.toLocaleTimeString('ca-ES', { hour: '2-digit', minute: '2-digit' });
+  return toISODate(d) === toISODate(new Date()) ? `avui a les ${time}` : `${formatShortDate(toISODate(d))}, ${time}`;
+}
+
+function syncLabel(status: SyncStatus, meta: SyncMeta): string {
+  if (status.state === 'syncing') return 'Sincronitzant…';
+  if (status.state === 'error') return 'No s’ha pogut sincronitzar. Ho tornarem a provar.';
+  if (hasLocalChanges(meta)) return 'Hi ha canvis pendents de sincronitzar';
+  return meta.lastSyncedAt ? `Sincronitzat ${formatSyncedAt(meta.lastSyncedAt)}` : 'Sincronitzat';
+}
+
+function AccountCard() {
+  const session = useSession();
+  const status = useSyncStatus();
+  const meta = useSyncMeta();
+
+  if (session) {
+    const name = accountName(session);
+    return (
+      <View style={styles.account}>
+        <Avatar name={name} size={48} />
+        <View style={{ flex: 1, gap: 2 }}>
+          <AppText variant="bodyStrong" numberOfLines={1}>
+            {name}
+          </AppText>
+          <AppText variant="small" color={status.state === 'error' ? colors.danger : colors.textMuted}>
+            {syncLabel(status, meta)}
+          </AppText>
+        </View>
+        {status.state === 'syncing' ? (
+          <ActivityIndicator color={colors.textMuted} />
+        ) : (
+          <Icon name={status.state === 'error' ? 'cloud' : 'cloudDone'} size={20} color={colors.textMuted} />
+        )}
+      </View>
+    );
+  }
+
+  const content = (
+    <>
+      <View style={styles.accountAvatar}>
+        <AppText variant="bodyStrong">Jo</AppText>
+      </View>
+      <View style={{ flex: 1, gap: 2 }}>
+        <AppText variant="bodyStrong">Dades en aquest dispositiu</AppText>
+        <AppText variant="small" color={cloudEnabled ? colors.accent : colors.textMuted}>
+          {cloudEnabled ? 'Inicia sessió per sincronitzar-les' : 'Sense compte: no se sincronitzen'}
+        </AppText>
+      </View>
+      {cloudEnabled ? <Icon name="chevronRight" size={14} color={colors.textMuted} /> : null}
+    </>
+  );
+
+  return cloudEnabled ? (
+    <Pressable
+      onPress={() => router.push('/compte')}
+      accessibilityRole="button"
+      accessibilityLabel="Inicia sessió per sincronitzar les dades"
+      style={({ pressed }) => [styles.account, pressed && { opacity: 0.7 }]}>
+      {content}
+    </Pressable>
+  ) : (
+    <View style={styles.account}>{content}</View>
+  );
 }
 
 export default function SettingsScreen() {
   const settings = useSettings();
+  const session = useSession();
   const biometricLabel = Platform.OS === 'ios' ? 'Bloqueja amb Face ID' : 'Bloqueja amb empremta';
 
   return (
     <Screen title="Ajustos">
-      <View style={styles.account}>
-        <View style={styles.accountAvatar}>
-          <AppText variant="bodyStrong">Jo</AppText>
-        </View>
-        <View style={{ flex: 1, gap: 2 }}>
-          <AppText variant="bodyStrong">Dades en aquest dispositiu</AppText>
-          <AppText variant="small" color={colors.textMuted}>
-            La sincronització amb compte arribarà aviat
-          </AppText>
-        </View>
-      </View>
+      <AccountCard />
+
+      {session ? (
+        <Section title="Compte">
+          <Row label="Sincronitza ara" icon="sync" onPress={() => syncNow()} />
+          <Row label="Tanca la sessió" icon="signOut" onPress={askSignOut} />
+          <Row label="Elimina el compte" icon="deleteAccount" onPress={askDeleteAccount} danger last />
+        </Section>
+      ) : null}
 
       {Platform.OS !== 'web' ? (
         <Section title="Seguretat">
@@ -125,7 +233,7 @@ export default function SettingsScreen() {
       <Section title="Dades">
         <Row label="Exporta a CSV" icon="export" onPress={exportCsv} />
         <Row label="Carrega dades d'exemple" icon="receipt" onPress={askLoadSample} />
-        <Row label="Esborra totes les dades" icon="trash" onPress={askErase} danger last />
+        <Row label="Esborra totes les dades" icon="trash" onPress={() => askErase(!!session)} danger last />
       </Section>
 
       <AppText variant="small" color={colors.textMuted} style={{ textAlign: 'center' }}>

@@ -4,7 +4,7 @@ import { useFonts } from 'expo-font';
 import { DarkTheme, Stack, ThemeProvider, type Theme } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 
 import { LockGate } from '@/features/lock/LockGate';
 import { ReminderManager } from '@/features/reminders/ReminderManager';
@@ -37,6 +37,17 @@ const sheetOptions = {
   contentStyle: { backgroundColor: colors.bg },
 } as const;
 
+const noSubscribe = () => () => {};
+
+/**
+ * False on the server and while hydrating, true afterwards. The data lives on the device
+ * (localStorage on the web), so the server can only render an empty shell: rendering the app
+ * after hydration keeps the first client render identical to the server HTML.
+ */
+function useIsClient(): boolean {
+  return useSyncExternalStore(noSubscribe, () => true, () => false);
+}
+
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
@@ -46,7 +57,8 @@ export default function RootLayout() {
     SpaceGrotesk_700Bold,
   });
   const onboarded = useOnboarded();
-  const ready = fontsLoaded || fontError !== null;
+  const isClient = useIsClient();
+  const ready = (fontsLoaded || fontError !== null) && isClient;
 
   useEffect(() => {
     if (ready) SplashScreen.hideAsync();

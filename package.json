@@ -51,6 +51,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "test": "node --test \"src/**/*.test.ts\"",
+    "deploy:web": "expo export --platform web && npx eas-cli@latest deploy --prod",
     "typecheck": "tsc --noEmit"
   },
   "private": true

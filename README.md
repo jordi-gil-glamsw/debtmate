@@ -127,6 +127,11 @@ Fet:
   pagament lligat al grup, que també compta al saldo total) i compartir el resum del grup o d’una
   despesa per WhatsApp
 
+- Web publicat a https://debtmate.expo.app (EAS Hosting). Per tornar-lo a publicar: `npm run deploy:web`
+  (cal `.env.local` amb les variables de Supabase, i haver fet `npx eas-cli@latest login`).
+  Fa servir `web.output: "server"` perquè les rutes dinàmiques (`/persona/<id>`, `/grup/<id>`…)
+  funcionin en entrar-hi directament o en recarregar
+
 Pendent:
 
-1. Publicar el web i les apps (EAS)
+1. Publicar les apps (EAS Build)

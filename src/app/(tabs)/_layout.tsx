@@ -18,7 +18,9 @@ export default function TabsLayout() {
         default: { color: colors.textMuted, fontFamily: fonts.bodySemiBold },
         selected: { color: colors.accent, fontFamily: fonts.bodySemiBold },
       }}>
-      <NativeTabs.Trigger name="index">
+      {/* iOS adds its own top inset to the first tab's ScrollView on top of Screen's safe-area
+          padding (double top margin). Screen already handles every inset, so opt out here. */}
+      <NativeTabs.Trigger name="index" disableAutomaticContentInsets>
         <NativeTabs.Trigger.Label>Inici</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} md="home" />
       </NativeTabs.Trigger>

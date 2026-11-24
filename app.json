@@ -10,12 +10,12 @@
     "backgroundColor": "#0E0F13",
     "ios": {
       "icon": "./assets/ovia.icon",
-      "bundleIdentifier": "com.jordigil.ovia",
+      "bundleIdentifier": "com.oviaapp.app",
       "supportsTablet": true,
       "usesAppleSignIn": true
     },
     "android": {
-      "package": "com.jordigil.ovia",
+      "package": "com.oviaapp.app",
       "adaptiveIcon": {
         "backgroundColor": "#0E0F13",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

@@ -98,6 +98,8 @@ export default function RootLayout() {
           <Stack.Protected guard={!onboarded} redirectTo="/">
             <Stack.Screen name="benvinguda" options={{ headerShown: false }} />
           </Stack.Protected>
+          {/* Public: the stores and the web link straight to /privacitat. */}
+          <Stack.Screen name="privacitat" options={{ headerShown: false }} />
           <Stack.Screen name="compte" options={{ ...sheetOptions, sheetAllowedDetents: [1] }} />
           <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
         </Stack>

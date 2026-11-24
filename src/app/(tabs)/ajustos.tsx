@@ -317,6 +317,10 @@ export default function SettingsScreen() {
         <Row label="Esborra totes les dades" icon="trash" onPress={() => askErase(!!session)} danger last />
       </Section>
 
+      <Section title="Informació">
+        <Row label="Política de privacitat" icon="lock" onPress={() => router.push('/privacitat')} last />
+      </Section>
+
       <AppText variant="small" color={colors.textMuted} style={{ textAlign: 'center' }}>
         Ovia {Constants.expoConfig?.version ?? ''}
       </AppText>

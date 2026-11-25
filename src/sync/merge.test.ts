@@ -70,6 +70,18 @@ describe('row mapping', () => {
     }
   });
 
+  it('round-trips the family wallet and stores personal as null', () => {
+    const family: Movement = { ...debt, wallet: 'familia' };
+    const row: MovementRow = { ...movementToRow(family), updated_at: 'x', deleted_at: null };
+    assert.equal(row.wallet, 'familia');
+    assert.deepEqual(rowToMovement(row), family);
+    assert.equal(movementToRow(debt).wallet, null);
+    assert.equal(movementToRow({ ...debt, wallet: 'personal' }).wallet, null);
+    // Rows from before migration 0006 have no wallet column: personal.
+    const { wallet: _w, ...old } = row;
+    assert.equal(rowToMovement(old as MovementRow).wallet, undefined);
+  });
+
   it('respects the database shape rules', () => {
     assert.equal(movementToRow(debt).method, null);
     assert.equal(movementToRow(payment).due_date, null);

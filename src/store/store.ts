@@ -2,7 +2,8 @@ import { useMemo, useSyncExternalStore } from 'react';
 
 import { balancesByContact, totals } from '@/domain/balances';
 import { expenseMovements } from '@/domain/groups';
-import type { Contact, DebtMovement, Group, GroupExpense, Id, Movement, PaymentMovement } from '@/domain/types';
+import type { Contact, DebtMovement, Group, GroupExpense, Id, Movement, PaymentMovement, Wallet, WalletView } from '@/domain/types';
+import { inWallet } from '@/domain/wallets';
 import { cleanupLocalReceipts, deleteLocalReceipt } from '@/features/receipts/receipts';
 import {
   emptyRecords,
@@ -28,6 +29,10 @@ export type Settings = {
   biometricLock: boolean;
   /** Notify on due dates (also needs the system permission). */
   reminders: boolean;
+  /** Split debts between personal money and the family card (shows the wallet switcher). */
+  wallets: boolean;
+  /** Wallet the screens show (only used while `wallets` is on). */
+  walletView: WalletView;
 };
 
 export type AppState = {
@@ -49,7 +54,7 @@ const initialState: AppState = {
   version: 1,
   onboarded: false,
   ...emptyRecords,
-  settings: { biometricLock: false, reminders: true },
+  settings: { biometricLock: false, reminders: true, wallets: false, walletView: 'all' },
   sync: emptySyncMeta,
 };
 
@@ -125,11 +130,38 @@ function allMovements(s: AppState): Movement[] {
   return all;
 }
 
+/** Wallet the screens show: the chosen one, or both while wallets are off. */
+function viewOf(s: AppState): WalletView {
+  return s.settings.wallets ? s.settings.walletView : 'all';
+}
+
+/** Keeps `list` (same reference) when nothing is filtered out, so selectors stay stable. */
+function cachedFilter<T extends { wallet?: Wallet }>() {
+  let cache: { list: readonly T[]; view: WalletView; out: T[] } | null = null;
+  return (list: T[], view: WalletView): T[] => {
+    if (cache && cache.list === list && cache.view === view) return cache.out;
+    const out = view === 'all' ? list : list.filter((x) => inWallet(view, x));
+    cache = { list, view, out };
+    return out;
+  };
+}
+const movementsInView = cachedFilter<Movement>();
+const expensesInView = cachedFilter<GroupExpense>();
+
 export const useContacts = () => useSelect((s) => s.contacts);
-/** Every movement, including the debts derived from group expenses (they carry expenseId). */
-export const useMovements = () => useSelect(allMovements);
+/**
+ * Movements of the wallet being viewed, including the debts derived from group expenses
+ * (they carry expenseId). Use useAllMovements for lookups by id and wallet-specific forms.
+ */
+export const useMovements = () => useSelect((s) => movementsInView(allMovements(s), viewOf(s)));
+/** Every movement of every wallet. */
+export const useAllMovements = () => useSelect(allMovements);
 export const useGroups = () => useSelect((s) => s.groups);
-export const useExpenses = () => useSelect((s) => s.expenses);
+/** Group expenses of the wallet being viewed. */
+export const useExpenses = () => useSelect((s) => expensesInView(s.expenses, viewOf(s)));
+/** Every group expense of every wallet. */
+export const useAllExpenses = () => useSelect((s) => s.expenses);
+export const useWalletView = () => useSelect(viewOf);
 export const useSettings = () => useSelect((s) => s.settings);
 export const useOnboarded = () => useSelect((s) => s.onboarded);
 export const useSyncMeta = () => useSelect((s) => s.sync);
@@ -145,8 +177,14 @@ export function useGroup(id: Id | undefined): Group | undefined {
 }
 
 export function useExpense(id: Id | undefined): GroupExpense | undefined {
-  const expenses = useExpenses();
+  const expenses = useAllExpenses();
   return useMemo(() => expenses.find((e) => e.id === id), [expenses, id]);
+}
+
+/** Any movement by id, whatever wallet is being viewed. */
+export function useMovement(id: Id | undefined): Movement | undefined {
+  const movements = useAllMovements();
+  return useMemo(() => movements.find((m) => m.id === id), [movements, id]);
 }
 
 export function useBalances(): Map<Id, number> {

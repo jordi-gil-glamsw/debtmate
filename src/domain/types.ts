@@ -19,6 +19,19 @@ export type Contact = {
 
 export type PaymentMethod = 'bizum' | 'efectiu' | 'transferencia' | 'altres';
 
+/**
+ * Which money a debt or expense comes from: my own (personal) or the shared family card.
+ * Stored only when it isn't personal (a missing value means personal), so older data stays valid.
+ */
+export type Wallet = 'personal' | 'familia';
+/** What the screens show: one wallet or both together. */
+export type WalletView = Wallet | 'all';
+
+export const WALLET_LABELS: Record<Wallet, string> = {
+  personal: 'Personal',
+  familia: 'Família',
+};
+
 type MovementBase = {
   id: Id;
   contactId: Id;
@@ -36,6 +49,8 @@ type MovementBase = {
   expenseId?: Id;
   /** On a payment: it settles debts from this group's expenses (it still counts for the person). */
   groupId?: Id;
+  /** Missing = personal. */
+  wallet?: Wallet;
 };
 
 /** A new debt. `owed` = the contact owes me; `owe` = I owe the contact. */
@@ -84,6 +99,8 @@ export type GroupExpense = {
   /** With split 'exact': cents per person, keyed by contact id or 'me'. */
   shares?: Record<string, number>;
   note?: string;
+  /** Missing = personal. The debts it creates belong to this wallet. */
+  wallet?: Wallet;
   createdAt: string;
 };
 

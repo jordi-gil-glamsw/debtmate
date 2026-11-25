@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -10,13 +10,15 @@ import { DateField } from '@/components/DateField';
 import { FieldGroup, FieldRow, TextField } from '@/components/Field';
 import { Icon } from '@/components/Icon';
 import { SheetHeader } from '@/components/SheetHeader';
+import { WalletField } from '@/components/WalletField';
 import { balanceOf } from '@/domain/balances';
 import { groupBalances } from '@/domain/groups';
 import { todayISO } from '@/domain/dates';
 import { centsToInput, formatMoney, parseAmount } from '@/domain/money';
-import { PAYMENT_METHOD_LABELS, type PaymentMethod } from '@/domain/types';
+import { PAYMENT_METHOD_LABELS, type PaymentMethod, type Wallet, type WalletView } from '@/domain/types';
+import { inWallet, walletField } from '@/domain/wallets';
 import { ReceiptField } from '@/features/receipts/ReceiptField';
-import { addMovement, useContact, useContacts, useExpenses, useGroup, useMovements } from '@/store/store';
+import { addMovement, useAllExpenses, useAllMovements, useContact, useContacts, useGroup, useSettings, useWalletView } from '@/store/store';
 import { colors, fonts, radius, space, sheetMaxWidth } from '@/theme/tokens';
 
 type Preset = 'all' | 'half' | 'other';
@@ -27,17 +29,28 @@ export default function PaymentSheet() {
   const { id, grup } = useLocalSearchParams<{ id: string; grup?: string }>();
   const insets = useSafeAreaInsets();
   const contact = useContact(id);
-  const movements = useMovements();
+  const allMovements = useAllMovements();
   const group = useGroup(grup);
-  const expenses = useExpenses();
+  const allExpenses = useAllExpenses();
   const contacts = useContacts();
-  const balance = useMemo(() => {
+  const { wallets } = useSettings();
+  const view = useWalletView();
+
+  /** What's pending with this person (or in this group) in one wallet, or in both. */
+  const balanceIn = (scope: WalletView) => {
+    const movements = allMovements.filter((m) => inWallet(scope, m));
     if (!group) return balanceOf(movements, id);
     const ids = new Set(contacts.map((c) => c.id));
     const payments = movements.filter((m) => m.kind === 'payment' && m.groupId === group.id);
-    const own = expenses.filter((e) => e.groupId === group.id);
+    const own = allExpenses.filter((e) => e.groupId === group.id && inWallet(scope, e));
     return groupBalances(own, payments, (cid) => ids.has(cid)).get(id) ?? 0;
-  }, [movements, id, group, expenses, contacts]);
+  };
+  // Viewing both wallets: start on the one that has something pending.
+  const [wallet, setWallet] = useState<Wallet>(() =>
+    view !== 'all' ? view : balanceIn('personal') === 0 && balanceIn('familia') !== 0 ? 'familia' : 'personal',
+  );
+  const scope: WalletView = wallets ? wallet : 'all';
+  const balance = balanceIn(scope);
   const outstanding = Math.abs(balance);
   const half = Math.floor(outstanding / 2);
 
@@ -57,8 +70,12 @@ export default function PaymentSheet() {
     return (
       <View style={[styles.root, styles.content]}>
         <SheetHeader title="Pagament" onCancel={() => router.back()} />
+        {/* With wallets, the other one may still have something pending. */}
+        {contact ? <WalletField value={wallet} onChange={setWallet} /> : null}
         <AppText variant="body" color={colors.textMuted}>
-          No hi ha cap deute pendent amb aquesta persona.
+          {wallets && contact
+            ? 'No hi ha cap deute pendent amb aquesta persona en aquesta cartera.'
+            : 'No hi ha cap deute pendent amb aquesta persona.'}
         </AppText>
       </View>
     );
@@ -82,6 +99,7 @@ export default function PaymentSheet() {
           ? `Pagament rebut (${PAYMENT_METHOD_LABELS[method]})`
           : `Pagament fet (${PAYMENT_METHOD_LABELS[method]})`,
       ...(group ? { groupId: group.id } : {}),
+      ...(wallets ? walletField(wallet) : {}),
       date,
       ...(receipt ? { receipt } : {}),
       ...(note.trim() ? { note: note.trim() } : {}),
@@ -114,6 +132,14 @@ export default function PaymentSheet() {
       keyboardShouldPersistTaps="handled"
       automaticallyAdjustKeyboardInsets>
       <SheetHeader title="Registrar pagament" onCancel={() => router.back()} />
+
+      <WalletField
+        value={wallet}
+        onChange={(w) => {
+          setWallet(w);
+          setPreset('all');
+        }}
+      />
 
       <View style={{ gap: space.xs }}>
         <AppText variant="title" accessibilityRole="header">

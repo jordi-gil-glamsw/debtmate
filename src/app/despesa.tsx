@@ -11,12 +11,14 @@ import { FieldGroup, FieldRow, TextField } from '@/components/Field';
 import { Icon } from '@/components/Icon';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { SheetHeader } from '@/components/SheetHeader';
+import { WalletField } from '@/components/WalletField';
 import { todayISO } from '@/domain/dates';
 import { exactDifference, expenseMovements, expenseProblem, expenseShareMessage, expenseShares, ME } from '@/domain/groups';
 import { centsToInput, formatMoney, parseAmount } from '@/domain/money';
-import type { GroupExpense } from '@/domain/types';
+import type { GroupExpense, Wallet } from '@/domain/types';
+import { defaultWallet, walletField, walletOf } from '@/domain/wallets';
 import { confirm, shareText } from '@/lib/dialogs';
-import { addExpense, deleteExpense, updateExpense, useContacts, useExpense, useGroup } from '@/store/store';
+import { addExpense, deleteExpense, updateExpense, useContacts, useExpense, useGroup, useWalletView } from '@/store/store';
 import { colors, fonts, radius, sheetMaxWidth, space, touchTarget } from '@/theme/tokens';
 
 type Split = 'equal' | 'exact';
@@ -34,6 +36,7 @@ export default function ExpenseSheet() {
   const existing = useExpense(params.id);
   const group = useGroup(existing?.groupId ?? params.grup);
   const contacts = useContacts();
+  const view = useWalletView();
   const insets = useSafeAreaInsets();
   const today = todayISO();
 
@@ -53,6 +56,7 @@ export default function ExpenseSheet() {
     existing ? [...(existing.includesMe ? [ME] : []), ...existing.participantIds] : [ME, ...(group?.memberIds ?? [])],
   );
   const [split, setSplit] = useState<Split>(existing?.split ?? 'equal');
+  const [wallet, setWallet] = useState<Wallet>(existing ? walletOf(existing) : defaultWallet(view));
   const [exactText, setExactText] = useState<Record<string, string>>(() =>
     Object.fromEntries(Object.entries(existing?.shares ?? {}).map(([k, v]) => [k, centsToInput(v)])),
   );
@@ -123,9 +127,10 @@ export default function ExpenseSheet() {
       includesMe,
       ...(split === 'exact' ? { split: 'exact' as const, shares: exactShares } : {}),
       ...(note.trim() ? { note: note.trim() } : {}),
+      ...walletField(wallet),
     };
     if (existing) {
-      const { note: _note, split: _split, shares: _shares, ...rest } = existing;
+      const { note: _note, split: _split, shares: _shares, wallet: _wallet, ...rest } = existing;
       updateExpense({ ...rest, ...fields });
     } else addExpense(fields);
     router.back();
@@ -183,6 +188,8 @@ export default function ExpenseSheet() {
           <DateField value={date} onChange={setDate} maximum={today} accessibilityLabel="Data de la despesa" />
         </FieldRow>
       </FieldGroup>
+
+      <WalletField value={wallet} onChange={setWallet} />
 
       <View style={{ gap: space.sm }}>
         <AppText variant="captionStrong" color={colors.textMuted}>

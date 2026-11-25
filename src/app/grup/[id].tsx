@@ -8,6 +8,7 @@ import { Button } from '@/components/Button';
 import { Icon } from '@/components/Icon';
 import { MovementRow } from '@/components/MovementRow';
 import { EmptyState, Screen, SectionHeader } from '@/components/Screen';
+import { WalletSwitcher } from '@/components/WalletSwitcher';
 import { sortNewestFirst } from '@/domain/balances';
 import { formatShortDate } from '@/domain/dates';
 import { expenseShares, groupBalances, groupNet, groupShareMessage, ME, myNetEffect } from '@/domain/groups';
@@ -160,6 +161,8 @@ export default function GroupScreen() {
           ),
         }}
       />
+
+      <WalletSwitcher />
 
       <View style={styles.card}>
         <AppText variant="captionStrong" color={balanceColor(stats.net)}>

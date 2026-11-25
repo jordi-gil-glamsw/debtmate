@@ -75,6 +75,7 @@ export function expenseMovements(e: GroupExpense, contactExists: (id: Id) => boo
     createdAt: e.createdAt,
     expenseId: e.id,
     ...(e.note ? { note: e.note } : {}),
+    ...(e.wallet && e.wallet !== 'personal' ? { wallet: e.wallet } : {}),
   });
 
   if (e.paidBy === null) {

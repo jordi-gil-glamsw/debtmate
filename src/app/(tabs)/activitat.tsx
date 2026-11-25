@@ -5,6 +5,7 @@ import { AppText } from '@/components/AppText';
 import { Icon } from '@/components/Icon';
 import { describeMovement, MovementRow, openMovement } from '@/components/MovementRow';
 import { EmptyState, Screen } from '@/components/Screen';
+import { WalletSwitcher } from '@/components/WalletSwitcher';
 import { monthSummary, sortNewestFirst } from '@/domain/balances';
 import { formatDayHeading, formatMonth } from '@/domain/dates';
 import { formatMoney } from '@/domain/money';
@@ -53,6 +54,7 @@ export default function ActivityScreen() {
 
   return (
     <Screen title="Activitat">
+      <WalletSwitcher />
       <View style={styles.monthNav}>
         <Pressable onPress={() => shift(-1)} accessibilityRole="button" accessibilityLabel="Mes anterior" style={styles.navButton}>
           <Icon name="back" size={18} color={colors.textMuted} />

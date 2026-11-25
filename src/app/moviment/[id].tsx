@@ -11,12 +11,14 @@ import { DueDateField } from '@/components/DueDateField';
 import { FieldGroup, FieldRow, TextField } from '@/components/Field';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { SheetHeader } from '@/components/SheetHeader';
+import { WalletField } from '@/components/WalletField';
 import { todayISO } from '@/domain/dates';
 import { centsToInput, parseAmount } from '@/domain/money';
-import { PAYMENT_METHOD_LABELS, type Contact, type Movement, type PaymentMethod } from '@/domain/types';
+import { PAYMENT_METHOD_LABELS, type Contact, type Movement, type PaymentMethod, type Wallet } from '@/domain/types';
+import { walletField, walletOf } from '@/domain/wallets';
 import { ReceiptField } from '@/features/receipts/ReceiptField';
 import { confirm } from '@/lib/dialogs';
-import { deleteMovement, updateMovement, useContact, useMovements } from '@/store/store';
+import { deleteMovement, updateMovement, useContact, useMovement } from '@/store/store';
 import { colors, fonts, space, sheetMaxWidth } from '@/theme/tokens';
 
 const METHODS = Object.keys(PAYMENT_METHOD_LABELS) as PaymentMethod[];
@@ -24,7 +26,7 @@ const METHODS = Object.keys(PAYMENT_METHOD_LABELS) as PaymentMethod[];
 /** Edit sheet for an existing debt or payment. */
 export default function EditMovementSheet() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const movement = useMovements().find((m) => m.id === id);
+  const movement = useMovement(id);
   const contact = useContact(movement?.contactId);
   const insets = useSafeAreaInsets();
 
@@ -55,6 +57,7 @@ function EditForm({ movement, contact }: { movement: Movement; contact: Contact 
   const [direction, setDirection] = useState<'owed' | 'owe'>(movement.kind === 'debt' ? movement.direction : 'owed');
   const [dueDate, setDueDate] = useState<string | undefined>(movement.kind === 'debt' ? movement.dueDate : undefined);
   const [method, setMethod] = useState<PaymentMethod>(movement.kind === 'payment' ? movement.method : 'bizum');
+  const [wallet, setWallet] = useState<Wallet>(walletOf(movement));
 
   const amount = parseAmount(amountText);
   const canSave = amount !== null && amount > 0 && concept.trim().length > 0;
@@ -72,6 +75,7 @@ function EditForm({ movement, contact }: { movement: Movement; contact: Contact 
       ...(receipt ? { receipt } : {}),
       ...(note.trim() ? { note: note.trim() } : {}),
       ...(movement.groupId ? { groupId: movement.groupId } : {}),
+      ...walletField(wallet),
     };
     updateMovement(
       movement.kind === 'debt'
@@ -166,6 +170,8 @@ function EditForm({ movement, contact }: { movement: Movement; contact: Contact 
           </View>
         </View>
       ) : null}
+
+      <WalletField value={wallet} onChange={setWallet} />
 
       <ReceiptField value={receipt} onChange={setReceipt} />
 

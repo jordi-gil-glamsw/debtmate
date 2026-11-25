@@ -9,6 +9,7 @@ import { Button } from '@/components/Button';
 import { Icon } from '@/components/Icon';
 import { MovementRow, openMovement } from '@/components/MovementRow';
 import { EmptyState, Screen, SectionHeader } from '@/components/Screen';
+import { WalletSwitcher } from '@/components/WalletSwitcher';
 import { balanceOf, settlementProgress, sortNewestFirst } from '@/domain/balances';
 import { formatShortDate, todayISO } from '@/domain/dates';
 import { formatMoney } from '@/domain/money';
@@ -91,6 +92,8 @@ export default function PersonScreen() {
           ),
         }}
       />
+
+      <WalletSwitcher />
 
       <View style={styles.card}>
         <View style={styles.cardHead}>

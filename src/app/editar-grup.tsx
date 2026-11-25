@@ -10,7 +10,7 @@ import { FieldGroup, TextField } from '@/components/Field';
 import { Icon } from '@/components/Icon';
 import { SheetHeader } from '@/components/SheetHeader';
 import { confirm } from '@/lib/dialogs';
-import { addContact, addGroup, deleteGroup, updateGroup, useContacts, useExpenses, useGroup } from '@/store/store';
+import { addContact, addGroup, deleteGroup, updateGroup, useAllExpenses, useContacts, useGroup } from '@/store/store';
 import { colors, fonts, radius, sheetMaxWidth, space, touchTarget } from '@/theme/tokens';
 
 const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
@@ -20,7 +20,7 @@ export default function EditGroupSheet() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const group = useGroup(id);
   const contacts = useContacts();
-  const expenseCount = useExpenses().filter((e) => e.groupId === id).length;
+  const expenseCount = useAllExpenses().filter((e) => e.groupId === id).length;
   const insets = useSafeAreaInsets();
 
   const [name, setName] = useState(group?.name ?? '');

@@ -6,6 +6,7 @@ import { Chip } from '@/components/Chip';
 import { Icon } from '@/components/Icon';
 import { PersonRow } from '@/components/PersonRow';
 import { EmptyState, Screen } from '@/components/Screen';
+import { WalletSwitcher } from '@/components/WalletSwitcher';
 import { useContactsWithBalance } from '@/store/store';
 import { colors, fonts, radius, space, touchTarget } from '@/theme/tokens';
 
@@ -50,6 +51,8 @@ export default function PeopleScreen() {
           <Icon name="add" size={20} color={colors.onAccent} />
         </Pressable>
       }>
+      <WalletSwitcher />
+
       <View style={styles.search}>
         <Icon name="search" size={18} color={colors.textMuted} />
         <TextInput

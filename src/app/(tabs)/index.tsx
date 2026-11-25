@@ -7,6 +7,7 @@ import { BalanceBar } from '@/components/BalanceBar';
 import { Button } from '@/components/Button';
 import { PersonRow } from '@/components/PersonRow';
 import { EmptyState, Screen, SectionHeader } from '@/components/Screen';
+import { WalletSwitcher } from '@/components/WalletSwitcher';
 import { sortNewestFirst } from '@/domain/balances';
 import { formatMoney } from '@/domain/money';
 import { DesktopHome } from '@/features/desktop/DesktopHome';
@@ -41,6 +42,8 @@ function MobileHome() {
           {pending.length === 1 ? '1 persona' : `${pending.length} persones`}
         </AppText>
       }>
+      <WalletSwitcher />
+
       <View style={styles.balance} accessible accessibilityLabel={`Balanç net ${formatMoney(totals.net, { sign: 'always' })}`}>
         <AppText variant="caption" color={colors.textMuted}>
           Balanç net

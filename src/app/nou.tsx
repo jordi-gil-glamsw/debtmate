@@ -12,12 +12,15 @@ import { FieldGroup, FieldRow, TextField } from '@/components/Field';
 import { Icon } from '@/components/Icon';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { SheetHeader } from '@/components/SheetHeader';
+import { WalletField } from '@/components/WalletField';
 import { todayISO } from '@/domain/dates';
 import { parseAmount } from '@/domain/money';
+import type { Wallet } from '@/domain/types';
+import { defaultWallet, walletField } from '@/domain/wallets';
 import { ReceiptField } from '@/features/receipts/ReceiptField';
 import { requestReminderPermission } from '@/features/reminders/notifications';
 import { refreshReminders } from '@/features/reminders/ReminderManager';
-import { addContact, addMovement, readState, useContactsWithBalance } from '@/store/store';
+import { addContact, addMovement, readState, useContactsWithBalance, useWalletView } from '@/store/store';
 import { colors, fonts, radius, space, sheetMaxWidth } from '@/theme/tokens';
 
 type Direction = 'owed' | 'owe';
@@ -26,6 +29,7 @@ export default function NewMovementSheet() {
   const params = useLocalSearchParams<{ direction?: Direction; contactId?: string }>();
   const insets = useSafeAreaInsets();
   const people = useContactsWithBalance();
+  const view = useWalletView();
 
   const [direction, setDirection] = useState<Direction>(params.direction === 'owe' ? 'owe' : 'owed');
   const [amountText, setAmountText] = useState('');
@@ -38,6 +42,7 @@ export default function NewMovementSheet() {
   const today = todayISO();
   const [date, setDate] = useState(today);
   const [dueDate, setDueDate] = useState<string | undefined>(undefined);
+  const [wallet, setWallet] = useState<Wallet>(defaultWallet(view));
 
   const amount = parseAmount(amountText);
   const hasPerson = creatingNew ? newName.trim().length > 0 : Boolean(contactId);
@@ -56,6 +61,7 @@ export default function NewMovementSheet() {
       ...(receipt ? { receipt } : {}),
       ...(note.trim() ? { note: note.trim() } : {}),
       dueDate,
+      ...walletField(wallet),
     });
     router.back();
     // Ask for notifications at the moment they make sense: the first debt with a due date.
@@ -167,6 +173,8 @@ export default function NewMovementSheet() {
           <DueDateField value={dueDate} onChange={setDueDate} minimum={date} />
         </FieldRow>
       </FieldGroup>
+
+      <WalletField value={wallet} onChange={setWallet} />
 
       <ReceiptField value={receipt} onChange={setReceipt} />
 

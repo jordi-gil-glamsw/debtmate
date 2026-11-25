@@ -6,6 +6,7 @@ import { AppText } from '@/components/AppText';
 import { Avatar } from '@/components/Avatar';
 import { BalanceBar, ProgressBar } from '@/components/BalanceBar';
 import { Button } from '@/components/Button';
+import { WalletSwitcher } from '@/components/WalletSwitcher';
 import { Icon } from '@/components/Icon';
 import { MovementRow, openMovement } from '@/components/MovementRow';
 import { balanceLabel } from '@/components/PersonRow';
@@ -87,6 +88,10 @@ export function DesktopHome() {
             }
           />
         </View>
+      </View>
+
+      <View style={styles.walletSwitcher}>
+        <WalletSwitcher />
       </View>
 
       <View style={styles.cards}>
@@ -295,6 +300,7 @@ function EmptyTable() {
 }
 
 const styles = StyleSheet.create({
+  walletSwitcher: { maxWidth: 420 },
   scroll: { flex: 1, backgroundColor: colors.bg },
   content: { paddingHorizontal: 40, paddingTop: 28, paddingBottom: 40, gap: space.xxl, maxWidth: 1400, width: '100%', alignSelf: 'center' },
   toolbar: { flexDirection: 'row', flexWrap: 'wrap', gap: space.lg, justifyContent: 'space-between', alignItems: 'center' },

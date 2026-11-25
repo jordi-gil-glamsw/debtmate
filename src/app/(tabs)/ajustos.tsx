@@ -113,13 +113,13 @@ async function testReminder() {
 }
 
 async function exportCsv() {
-  const { contacts } = readState();
+  const { contacts, settings } = readState();
   const movements = readAllMovements();
   if (movements.length === 0) {
     notify('Res a exportar', 'Encara no hi ha cap moviment.');
     return;
   }
-  await shareText(movementsToCsv(contacts, movements), `ovia-${toISODate(new Date())}.csv`);
+  await shareText(movementsToCsv(contacts, movements, { withWallet: settings.wallets }), `ovia-${toISODate(new Date())}.csv`);
 }
 
 async function askLoadSample() {
@@ -310,6 +310,27 @@ export default function SettingsScreen() {
           />
         </Section>
       ) : null}
+
+      <Section title="Carteres">
+        <Row
+          label="Separa la targeta familiar"
+          icon="wallet"
+          last
+          right={
+            <Switch
+              value={settings.wallets}
+              onValueChange={(wallets) => updateSettings({ wallets })}
+              accessibilityLabel="Separa els deutes de la targeta familiar"
+              trackColor={{ true: colors.success, false: colors.surfaceMuted }}
+            />
+          }
+        />
+      </Section>
+      <AppText variant="small" color={colors.textMuted} style={styles.footnote}>
+        {settings.wallets
+          ? 'Cada moviment és Personal o Família. Tria a dalt de cada pantalla quina cartera vols veure.'
+          : 'Porta per separat els deutes dels teus diners i els de la targeta familiar compartida.'}
+      </AppText>
 
       <Section title="Dades">
         <Row label="Exporta a CSV" icon="export" onPress={exportCsv} />

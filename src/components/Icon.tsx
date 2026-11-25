@@ -23,6 +23,7 @@ const ICONS = {
   export: { ios: 'square.and.arrow.down', android: 'download', web: 'download' },
   personAdd: { ios: 'person.badge.plus', android: 'person_add', web: 'person_add' },
   receipt: { ios: 'doc.text', android: 'receipt_long', web: 'receipt_long' },
+  wallet: { ios: 'creditcard', android: 'credit_card', web: 'credit_card' },
   payment: { ios: 'eurosign.circle', android: 'payments', web: 'payments' },
   home: { ios: 'house', android: 'home', web: 'home' },
   people: { ios: 'person.2', android: 'group', web: 'group' },

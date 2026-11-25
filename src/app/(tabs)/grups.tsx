@@ -6,6 +6,7 @@ import { AppText } from '@/components/AppText';
 import { Button } from '@/components/Button';
 import { Icon } from '@/components/Icon';
 import { EmptyState, Screen } from '@/components/Screen';
+import { WalletSwitcher } from '@/components/WalletSwitcher';
 import { groupBalances, groupNet } from '@/domain/groups';
 import { formatMoney } from '@/domain/money';
 import type { Group } from '@/domain/types';
@@ -76,6 +77,8 @@ export default function GroupsScreen() {
           <Icon name="add" size={20} color={colors.onAccent} />
         </Pressable>
       }>
+      <WalletSwitcher />
+
       {rows.length === 0 ? (
         <EmptyState
           title="Encara no tens cap grup"

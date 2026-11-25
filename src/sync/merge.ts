@@ -7,7 +7,7 @@
  * Conflicts resolve as last-writer-wins, except that a local change not yet pushed
  * always wins over a pulled row.
  */
-import type { Contact, Group, GroupExpense, Id, Movement } from '../domain/types';
+import type { Contact, Group, GroupExpense, Id, Movement, Wallet } from '../domain/types';
 
 /** Synced tables, in push order (a row is pushed after the rows it references). */
 export const TABLES = ['contacts', 'groups', 'movements', 'expenses'] as const;
@@ -87,6 +87,8 @@ export type MovementRow = {
   note: string | null;
   receipt: string | null;
   group_id: Id | null;
+  /** null = personal (see migration 0006). */
+  wallet: string | null;
   created_at: string;
 } & RowMeta;
 
@@ -109,6 +111,8 @@ export type ExpenseRow = {
   split: 'equal' | 'exact';
   shares: Record<string, number> | null;
   note: string | null;
+  /** null = personal (see migration 0006). */
+  wallet: string | null;
   created_at: string;
 } & RowMeta;
 
@@ -123,6 +127,10 @@ export type ContactUpsert = Omit<ContactRow, keyof RowMeta>;
 export type MovementUpsert = Omit<MovementRow, keyof RowMeta | 'receipt'> & { receipt?: string | null };
 export type GroupUpsert = Omit<GroupRow, keyof RowMeta>;
 export type ExpenseUpsert = Omit<ExpenseRow, keyof RowMeta>;
+
+/** Personal is stored as null, so rows written by older app versions read as personal. */
+const walletToRow = (w: Wallet | undefined): string | null => (w && w !== 'personal' ? w : null);
+const walletFromRow = (w: string | null | undefined): { wallet?: Wallet } => (w === 'familia' ? { wallet: 'familia' } : {});
 
 export function contactToRow(c: Contact): ContactUpsert {
   return { id: c.id, name: c.name, created_at: c.createdAt };
@@ -145,6 +153,7 @@ export function movementToRow(m: Movement, { withReceipt = true }: { withReceipt
     method: m.kind === 'payment' ? m.method : null,
     note: m.note ?? null,
     group_id: m.groupId ?? null,
+    wallet: walletToRow(m.wallet),
     ...(withReceipt ? { receipt: m.receipt ?? null } : {}),
     created_at: m.createdAt,
   };
@@ -167,6 +176,7 @@ export function expenseToRow(e: GroupExpense): ExpenseUpsert {
     split: e.split ?? 'equal',
     shares: e.split === 'exact' ? (e.shares ?? {}) : null,
     note: e.note ?? null,
+    wallet: walletToRow(e.wallet),
     created_at: e.createdAt,
   };
 }
@@ -186,6 +196,7 @@ export function rowToMovement(r: MovementRow): Movement {
     ...(r.note ? { note: r.note } : {}),
     ...(r.receipt ? { receipt: r.receipt } : {}),
     ...(r.group_id ? { groupId: r.group_id } : {}),
+    ...walletFromRow(r.wallet),
   };
   if (r.kind === 'debt') {
     return {
@@ -219,6 +230,7 @@ export function rowToExpense(r: ExpenseRow): GroupExpense {
     includesMe: r.includes_me,
     ...(r.split === 'exact' ? { split: 'exact' as const, shares: r.shares ?? {} } : {}),
     ...(r.note ? { note: r.note } : {}),
+    ...walletFromRow(r.wallet),
     createdAt: r.created_at,
   };
 }
